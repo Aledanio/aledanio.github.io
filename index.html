@@ -12,6 +12,7 @@
   <link rel="alternate icon" href="icons/favicon.ico">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <meta name="theme-color" content="#E0672C">
+  <meta name="color-scheme" content="light">
   <meta name="apple-mobile-web-app-title" content="Aledaño">
   <style>
     :root {
@@ -28,19 +29,7 @@
       --t-templado: #F6B183;
       --t-frio: #9db8c9;
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #161513;
-        --fg: #eeeae3;
-        --muted: #a29c92;
-        --accent: #e0825a;
-        --card: #211f1c;
-        --line: #34302b;
-        --track: #2d2a26;
-        --t-1: #c2412a;
-        --t-frio: #5f7f93;
-      }
-    }
+    :root { color-scheme: light; }
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
     body {
@@ -153,9 +142,54 @@
     .ayuda { color: var(--muted); font-size: 0.95rem; }
     .ayuda p { margin: 0 0 8px; }
     .mensaje { text-align: center; color: var(--muted); font-size: 1.1rem; margin-top: 48px; }
+
+    /* Portada animada: 2 s y desaparece sola. */
+    .portada {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      background: var(--bg);
+      animation: portada-fuera 0.4s ease-in 1.6s forwards;
+    }
+    .portada svg { width: 132px; height: 132px; animation: portada-logo 0.5s cubic-bezier(.2, .9, .3, 1.3) both; }
+    .portada circle { transform-box: fill-box; transform-origin: center; animation: portada-anillo 1.2s ease-in-out both; }
+    .portada circle:nth-of-type(1) { animation-delay: 0.15s; }
+    .portada circle:nth-of-type(2) { animation-delay: 0.3s; }
+    .portada circle:nth-of-type(3) { animation-delay: 0.45s; }
+    .portada circle:nth-of-type(4) { animation-delay: 0.6s; }
+    .portada p span { color: var(--accent); }
+    .portada p {
+      margin: 0;
+      color: var(--fg);
+      font-size: 2.6rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      animation: portada-nombre 0.5s ease-out 0.5s both;
+    }
+    @keyframes portada-logo { from { transform: scale(0.6); opacity: 0; } }
+    @keyframes portada-anillo {
+      0%, 100% { transform: scale(1); }
+      35% { transform: scale(0.86); }
+      70% { transform: scale(1.06); }
+    }
+    @keyframes portada-nombre { from { transform: translateY(12px); opacity: 0; } }
+    @keyframes portada-fuera { to { opacity: 0; visibility: hidden; } }
+    @media (prefers-reduced-motion: reduce) {
+      .portada svg, .portada circle, .portada p { animation: none; }
+    }
   </style>
 </head>
 <body>
+  <div class="portada" id="portada" aria-hidden="true">
+    <svg viewBox="0 0 96 96"><rect width="96" height="96" rx="22" fill="#E0672C"/><circle cx="48" cy="48" r="36" fill="#EF8D52"/><circle cx="48" cy="48" r="26" fill="#F6B183"/><circle cx="48" cy="48" r="16" fill="#FFFFFF"/><circle cx="48" cy="48" r="7" fill="#8A2312"/></svg>
+    <p>Aleda<span>ñ</span>o</p>
+  </div>
+
   <div class="pagina">
     <header>
       <h1><img src="logo.svg" alt="" width="40" height="40"><span class="titulo">Aleda<span>ñ</span>o</span></h1>
@@ -465,6 +499,7 @@
     }
 
     iniciar();
+    setTimeout(() => $("portada").remove(), 2000);
 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("sw.js").catch(() => {});
