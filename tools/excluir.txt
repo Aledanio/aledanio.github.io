@@ -1,0 +1,2 @@
+# Palabras vetadas en Aledaño: una por línea. Las líneas que empiezan por # se ignoran.
+# Después de editar, vuelve a ejecutar tools/generar_rankings.py.

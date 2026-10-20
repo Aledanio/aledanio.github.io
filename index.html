@@ -4,13 +4,29 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Aledaño</title>
-  <meta name="description" content="Aledaño, un juego nuevo. Próximamente.">
+  <meta name="description" content="Adivina la palabra del día por cercanía de significado.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="icons/favicon-16.png" sizes="16x16" type="image/png">
+  <link rel="alternate icon" href="icons/favicon.ico">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#E0672C">
+  <meta name="apple-mobile-web-app-title" content="Aledaño">
   <style>
     :root {
       --bg: #f6f3ee;
       --fg: #1f1d1a;
       --muted: #6b665e;
       --accent: #b4552d;
+      --card: #ffffff;
+      --line: #e4ded4;
+      --track: #ece6dc;
+      --t-1: #8A2312;
+      --t-ardiendo: #E0672C;
+      --t-caliente: #EF8D52;
+      --t-templado: #F6B183;
+      --t-frio: #9db8c9;
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -18,37 +34,441 @@
         --fg: #eeeae3;
         --muted: #a29c92;
         --accent: #e0825a;
+        --card: #211f1c;
+        --line: #34302b;
+        --track: #2d2a26;
+        --t-1: #c2412a;
+        --t-frio: #5f7f93;
       }
     }
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     body {
       margin: 0;
       min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 16px;
       background: var(--bg);
       color: var(--fg);
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      text-align: center;
+      line-height: 1.4;
     }
+    .pagina {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 20px 16px 48px;
+    }
+    header { text-align: center; margin-bottom: 20px; }
     h1 {
       margin: 0;
-      font-size: clamp(3rem, 12vw, 6rem);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-size: 2.5rem;
       letter-spacing: -0.03em;
     }
-    h1 span { color: var(--accent); }
-    p {
-      margin: 0.75rem 0 0;
+    h1 .titulo span { color: var(--accent); }
+    h1 img { width: 40px; height: 40px; flex: none; }
+    .numero { margin: 4px 0 0; color: var(--muted); font-size: 0.95rem; }
+    h2 {
+      margin: 24px 0 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
       color: var(--muted);
-      font-size: 1.125rem;
     }
+    form { display: flex; gap: 8px; }
+    input, button { font: inherit; }
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: 12px 14px;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+      color: var(--fg);
+      font-size: 1.1rem;
+    }
+    input:focus { outline: none; border-color: var(--accent); }
+    button {
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--t-ardiendo);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.secundario {
+      background: transparent;
+      color: var(--fg);
+      border: 1px solid var(--line);
+      font-weight: 500;
+    }
+    button.confirmar { border-color: var(--t-1); color: var(--t-1); }
+    .aviso { min-height: 1.4em; margin: 8px 2px 0; color: var(--muted); font-size: 0.95rem; }
+    .acciones {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .acciones .cuenta { margin-left: auto; color: var(--muted); font-size: 0.95rem; }
+    .lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+    .fila {
+      display: grid;
+      grid-template-columns: minmax(0, 9.5em) 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      background: var(--card);
+      border: 1px solid var(--line);
+    }
+    .fila.reciente { border-color: var(--accent); }
+    .fila .pal { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fila .pal small { font-weight: 400; color: var(--muted); }
+    .fila .barra { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+    .fila .barra i { display: block; height: 100%; border-radius: 4px; width: var(--p); background: var(--t); }
+    .fila .pos { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 3.2em; text-align: right; }
+    .fila.probada { border-style: dashed; }
+    .t-1 { --t: var(--t-1); }
+    .t-ardiendo { --t: var(--t-ardiendo); }
+    .t-caliente { --t: var(--t-caliente); }
+    .t-templado { --t: var(--t-templado); }
+    .t-frio { --t: var(--t-frio); }
+    .final {
+      margin-top: 8px;
+      padding: 20px 16px;
+      border-radius: 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      text-align: center;
+    }
+    .final h2 { margin-top: 0; }
+    .final .solucion { margin: 0; font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .final .datos { margin: 8px 0 16px; color: var(--muted); }
+    .final .copiado { margin: 8px 0 0; min-height: 1.4em; color: var(--muted); font-size: 0.9rem; }
+    .mas { display: block; margin: 12px auto 0; }
+    .ayuda { color: var(--muted); font-size: 0.95rem; }
+    .ayuda p { margin: 0 0 8px; }
+    .mensaje { text-align: center; color: var(--muted); font-size: 1.1rem; margin-top: 48px; }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Aleda<span>ñ</span>o</h1>
-    <p>Próximamente.</p>
-  </main>
+  <div class="pagina">
+    <header>
+      <h1><img src="logo.svg" alt="" width="40" height="40"><span class="titulo">Aleda<span>ñ</span>o</span></h1>
+      <p class="numero" id="numero">&nbsp;</p>
+    </header>
+
+    <p class="mensaje" id="mensaje">Cargando…</p>
+
+    <main id="juego" hidden>
+      <section class="final" id="final" hidden>
+        <h2 id="final-titulo"></h2>
+        <p class="solucion" id="solucion"></p>
+        <p class="datos" id="final-datos"></p>
+        <button id="compartir">Compartir</button>
+        <p class="copiado" id="copiado" role="status" aria-live="polite"></p>
+      </section>
+
+      <div id="controles">
+        <form id="formulario" autocomplete="off">
+          <input id="entrada" type="text" placeholder="Escribe una palabra" aria-label="Palabra"
+                 autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go">
+          <button type="submit">Probar</button>
+        </form>
+        <p class="aviso" id="aviso" role="status" aria-live="polite"></p>
+        <div class="acciones">
+          <button type="button" class="secundario" id="pista">Pista</button>
+          <button type="button" class="secundario" id="rendirse">Rendirse</button>
+          <span class="cuenta" id="cuenta"></span>
+        </div>
+      </div>
+
+      <section id="ultimo" hidden>
+        <h2>Último intento</h2>
+        <ol class="lista" id="ultimo-lista"></ol>
+      </section>
+
+      <section id="intentos" hidden>
+        <h2>Tus intentos</h2>
+        <ol class="lista" id="lista"></ol>
+      </section>
+
+      <section id="aledanos" hidden>
+        <h2>Los aledaños</h2>
+        <ol class="lista" id="aledanos-lista"></ol>
+        <button type="button" class="secundario mas" id="ver-mas">Ver las 100</button>
+      </section>
+
+      <section class="ayuda" id="ayuda">
+        <h2>Cómo se juega</h2>
+        <p>Hay una palabra secreta. Escribe cualquier palabra y verás su puesto entre las de significado más parecido: la secreta es la nº 1.</p>
+        <p>Cuanto más baja el número y más se llena la barra, más cerca estás. Intentos ilimitados.</p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const INICIO = Date.UTC(2026, 9, 21); // día nº 1
+    const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+    const $ = (id) => document.getElementById(id);
+
+    let vocab, rango, orden, num, palabra, estado, racha;
+    const exactas = new Map();
+    const sinTildes = new Map();
+
+    function normalizar(texto) {
+      return texto.normalize("NFD").replace(/[̀-ͯ]/g, "");
+    }
+
+    function hoyEnMadrid() {
+      const [a, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid" })
+        .format(new Date()).split("-").map(Number);
+      return Math.round((Date.UTC(a, m - 1, d) - INICIO) / 86400000) + 1;
+    }
+
+    function leer(clave, porDefecto) {
+      try { return JSON.parse(localStorage.getItem(clave)) ?? porDefecto; } catch { return porDefecto; }
+    }
+    function guardar(clave, valor) {
+      try { localStorage.setItem(clave, JSON.stringify(valor)); } catch {}
+    }
+    const guardarEstado = () => guardar(`aledanio:dia:${num}`, estado);
+
+    // Busca una palabra: forma exacta, luego sin tildes, y por último sin plural.
+    function buscar(texto) {
+      const w = texto.trim().toLowerCase();
+      const candidatas = [w];
+      if (w.endsWith("es")) candidatas.push(w.slice(0, -2));
+      if (w.endsWith("s")) candidatas.push(w.slice(0, -1));
+      for (const c of candidatas) if (exactas.has(c)) return exactas.get(c);
+      for (const c of candidatas) {
+        const i = sinTildes.get(normalizar(c));
+        if (i !== undefined) return i;
+      }
+      return -1;
+    }
+
+    function temperatura(puesto) {
+      if (puesto === 1) return "t-1";
+      if (puesto <= 100) return "t-ardiendo";
+      if (puesto <= 500) return "t-caliente";
+      if (puesto <= 2000) return "t-templado";
+      return "t-frio";
+    }
+    const CUADRADOS = { "t-1": "🟥", "t-ardiendo": "🟥", "t-caliente": "🟧", "t-templado": "🟨", "t-frio": "🟦" };
+
+    function fila(i, { reciente = false, pista = false, probada = false } = {}) {
+      const puesto = rango[i];
+      const lleno = Math.max(2, 100 * (1 - Math.log(puesto) / Math.log(vocab.length)));
+      const li = document.createElement("li");
+      li.className = `fila ${temperatura(puesto)}${reciente ? " reciente" : ""}${probada ? " probada" : ""}`;
+      li.innerHTML = `<span class="pal"></span><span class="barra"><i style="--p:${lleno.toFixed(1)}%"></i></span><span class="pos">${puesto}</span>`;
+      li.querySelector(".pal").textContent = vocab[i];
+      if (pista) li.querySelector(".pal").insertAdjacentHTML("beforeend", " <small>(pista)</small>");
+      return li;
+    }
+
+    function pintar(reciente) {
+      const intentos = estado.intentos.filter((t) => !t.pista).length;
+      const pistas = estado.intentos.length - intentos;
+      $("cuenta").textContent = `${intentos} ${intentos === 1 ? "intento" : "intentos"}` +
+        (pistas ? ` · ${pistas} ${pistas === 1 ? "pista" : "pistas"}` : "");
+      $("ayuda").hidden = estado.intentos.length > 0 || !!estado.fin;
+
+      const ultimo = reciente ?? estado.intentos.at(-1)?.i;
+      $("ultimo").hidden = ultimo === undefined || !!estado.fin;
+      if (ultimo !== undefined) {
+        const t = estado.intentos.find((t) => t.i === ultimo);
+        $("ultimo-lista").replaceChildren(fila(ultimo, { reciente: true, pista: t?.pista }));
+      }
+
+      const ordenados = [...estado.intentos].sort((a, b) => rango[a.i] - rango[b.i]);
+      $("lista").replaceChildren(...ordenados.map((t) => fila(t.i, { reciente: t.i === ultimo, pista: t.pista })));
+      $("intentos").hidden = estado.intentos.length === 0;
+
+      if (estado.fin) pintarFinal(intentos, pistas);
+    }
+
+    function pintarFinal(intentos, pistas) {
+      $("controles").hidden = true;
+      $("final").hidden = false;
+      $("final-titulo").textContent = estado.fin === "resuelto" ? "¡Lo has encontrado!" : "La palabra era";
+      $("solucion").textContent = palabra;
+      const partes = [`${intentos} ${intentos === 1 ? "intento" : "intentos"}`];
+      if (pistas) partes.push(`${pistas} ${pistas === 1 ? "pista" : "pistas"}`);
+      partes.push(`racha: ${rachaActual()} ${rachaActual() === 1 ? "día" : "días"}`);
+      $("final-datos").textContent = partes.join(" · ");
+
+      const probadas = new Set(estado.intentos.map((t) => t.i));
+      const cuantas = $("aledanos").dataset.todas ? 100 : 30;
+      $("aledanos-lista").replaceChildren(
+        ...orden.slice(0, cuantas).map((i) => fila(i, { probada: probadas.has(i) }))
+      );
+      $("ver-mas").hidden = cuantas === 100;
+      $("aledanos").hidden = false;
+    }
+
+    function rachaActual() {
+      return racha.ultimo >= num - 1 ? racha.actual : 0;
+    }
+
+    function terminar(fin) {
+      estado.fin = fin;
+      if (fin === "resuelto") {
+        if (racha.ultimo === num - 1) racha.actual += 1;
+        else if (racha.ultimo !== num) racha.actual = 1;
+      } else {
+        racha.actual = 0;
+      }
+      racha.ultimo = num;
+      guardar("aledanio:racha", racha);
+    }
+
+    function probar(texto) {
+      const aviso = $("aviso");
+      if (!texto.trim()) return;
+      const i = buscar(texto);
+      if (i < 0) { aviso.textContent = "No conozco esa palabra"; return; }
+      if (estado.intentos.some((t) => t.i === i)) {
+        aviso.textContent = `Ya has probado «${vocab[i]}»`;
+        pintar(i);
+        return;
+      }
+      aviso.textContent = "";
+      estado.intentos.push({ p: vocab[i], i });
+      if (rango[i] === 1) terminar("resuelto");
+      guardarEstado();
+      pintar(i);
+    }
+
+    // Pista: una palabra a mitad de camino entre tu mejor puesto y la solución.
+    function pedirPista() {
+      const probados = new Set(estado.intentos.map((t) => rango[t.i]));
+      const mejor = Math.min(...probados);
+      let objetivo = probados.size ? Math.max(2, Math.floor(mejor / 2)) : Math.min(300, vocab.length);
+      while (objetivo >= 2 && probados.has(objetivo)) objetivo--;
+      if (objetivo < 2) {
+        objetivo = 2;
+        while (probados.has(objetivo)) objetivo++;
+      }
+      const i = orden[objetivo - 1];
+      $("aviso").textContent = "";
+      estado.intentos.push({ p: vocab[i], i, pista: true });
+      guardarEstado();
+      pintar(i);
+    }
+
+    let rendirseTemporizador;
+    function rendirse() {
+      const boton = $("rendirse");
+      if (!boton.classList.contains("confirmar")) {
+        boton.classList.add("confirmar");
+        boton.textContent = "¿Seguro? Pulsa otra vez";
+        rendirseTemporizador = setTimeout(() => {
+          boton.classList.remove("confirmar");
+          boton.textContent = "Rendirse";
+        }, 3000);
+        return;
+      }
+      clearTimeout(rendirseTemporizador);
+      terminar("rendido");
+      guardarEstado();
+      pintar();
+    }
+
+    function textoCompartir() {
+      const intentos = estado.intentos.filter((t) => !t.pista);
+      const pistas = estado.intentos.length - intentos.length;
+      let cabecera = `Aledaño #${num} · ${intentos.length} ${intentos.length === 1 ? "intento" : "intentos"}`;
+      if (pistas) cabecera += ` · ${pistas} ${pistas === 1 ? "pista" : "pistas"}`;
+      if (estado.fin === "rendido") cabecera += " · me rendí";
+      let cuadrados = intentos.map((t) => CUADRADOS[temperatura(rango[t.i])]);
+      if (cuadrados.length > 24) cuadrados = ["…", ...cuadrados.slice(-24)];
+      return `${cabecera}\n${cuadrados.join("")}\naledanio.github.io`;
+    }
+
+    async function compartir() {
+      const texto = textoCompartir();
+      try {
+        if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+          await navigator.share({ text: texto });
+          return;
+        }
+        await navigator.clipboard.writeText(texto);
+        $("copiado").textContent = "Copiado. ¡Pégalo donde quieras!";
+      } catch (e) {
+        if (e.name !== "AbortError") $("copiado").textContent = texto;
+      }
+    }
+
+    function sinPartida() {
+      $("mensaje").textContent = "Vuelve pronto: estamos preparando nuevas palabras";
+    }
+
+    async function iniciar() {
+      const parametro = Number(new URLSearchParams(location.search).get("dia"));
+      num = Number.isInteger(parametro) && parametro >= 1 ? parametro : hoyEnMadrid();
+      if (num < 1) return sinPartida();
+
+      const nnn = String(num).padStart(3, "0");
+      let dia;
+      try {
+        const [rv, rd] = await Promise.all([fetch("data/vocabulario.json"), fetch(`data/dia-${nnn}.json`)]);
+        if (!rv.ok || !rd.ok) return sinPartida();
+        [vocab, dia] = await Promise.all([rv.json(), rd.json()]);
+      } catch {
+        $("mensaje").textContent = "No se ha podido cargar la partida. Comprueba tu conexión.";
+        return;
+      }
+
+      orden = dia.orden;
+      palabra = vocab[orden[0]];
+      rango = new Int32Array(vocab.length);
+      orden.forEach((i, puesto) => { rango[i] = puesto + 1; });
+      vocab.forEach((w, i) => {
+        exactas.set(w, i);
+        const clave = normalizar(w);
+        if (!sinTildes.has(clave)) sinTildes.set(clave, i);
+      });
+
+      const [, m, d] = dia.fecha.split("-").map(Number);
+      $("numero").textContent = `Nº ${num} · ${d} ${MESES[m - 1]}`;
+
+      // Se guardan las palabras, no los índices, por si el vocabulario se regenera.
+      estado = leer(`aledanio:dia:${num}`, { intentos: [], fin: null });
+      estado.intentos = estado.intentos
+        .map((t) => ({ ...t, i: exactas.get(t.p) }))
+        .filter((t) => t.i !== undefined);
+      racha = leer("aledanio:racha", { ultimo: 0, actual: 0 });
+
+      $("mensaje").hidden = true;
+      $("juego").hidden = false;
+      pintar();
+
+      $("formulario").addEventListener("submit", (e) => {
+        e.preventDefault();
+        probar($("entrada").value);
+        $("entrada").value = "";
+        $("entrada").focus();
+      });
+      $("pista").addEventListener("click", pedirPista);
+      $("rendirse").addEventListener("click", rendirse);
+      $("compartir").addEventListener("click", compartir);
+      $("ver-mas").addEventListener("click", () => {
+        $("aledanos").dataset.todas = "1";
+        pintar();
+      });
+    }
+
+    iniciar();
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
+  </script>
 </body>
 </html>
