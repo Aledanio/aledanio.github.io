@@ -105,6 +105,7 @@
       font-variant-numeric: tabular-nums;
     }
     .racha svg { width: 16px; height: 16px; fill: currentColor; }
+    .redondo.ayuda { font-size: 1.1rem; font-weight: 800; }
     .racha.hoy { background: var(--t-ardiendo); border-color: var(--t-ardiendo); color: #fff; }
     .racha.pendiente { border: 1px dashed var(--t-ardiendo); color: var(--accent); }
     .redondo:focus-visible, .racha:focus-visible, .cal-dia:focus-visible, .cal-mes:focus-visible {
@@ -200,6 +201,15 @@
     .l-resuelto { background: var(--t-ardiendo); }
     .l-rendido { background: var(--t-templado); }
     .cal-racha { margin: 0; font-size: 0.9rem; color: var(--muted); text-align: center; }
+
+    /* Ventana de ayuda */
+    .reglas { width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; }
+    .reglas h2 { margin: 0; font-size: 1.2rem; letter-spacing: 0; text-transform: none; color: var(--fg); }
+    .reglas ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 0.92rem; }
+    .reglas b { white-space: nowrap; }
+    .escala { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-size: 0.82rem; color: var(--muted); }
+    .escala span { display: inline-flex; align-items: center; gap: 5px; }
+    .escala i { display: inline-block; width: 18px; height: 8px; border-radius: 4px; background: var(--t); }
     h2 {
       margin: 24px 0 8px;
       font-size: 0.8rem;
@@ -230,6 +240,7 @@
       font-weight: 600;
       cursor: pointer;
     }
+    button:focus:not(:focus-visible) { outline: none; }
     button.secundario {
       background: transparent;
       color: var(--fg);
@@ -281,8 +292,6 @@
     .final .datos { margin: 8px 0 16px; color: var(--muted); }
     .final .copiado { margin: 8px 0 0; min-height: 1.4em; color: var(--muted); font-size: 0.9rem; }
     .mas { display: block; margin: 12px auto 0; }
-    .ayuda { color: var(--muted); font-size: 0.95rem; }
-    .ayuda p { margin: 0 0 8px; }
     .mensaje { text-align: center; color: var(--muted); font-size: 1.1rem; margin-top: 48px; }
 
     /* Portada animada: 2 s y desaparece sola. */
@@ -339,11 +348,34 @@
         <div class="barra">
           <button type="button" class="redondo" id="abrir-calendario" aria-haspopup="dialog" aria-label="Días anteriores" title="Días anteriores"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
           <button type="button" class="racha" id="racha"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M13.6 2c.4 3-.9 4.8-2.3 6.4-.6-1.1-1.5-1.9-2.7-2.3.5 2-.4 3.5-1.5 5.1C6.1 12.6 5.3 14.1 5.3 16c0 3.6 3 6.2 6.7 6.2s6.7-2.6 6.7-6.2c0-2.7-1.3-4.8-2.5-6.8-1.2-1.9-2.3-3.9-2.6-7.2zM12 20.4c-1.7 0-3-1.2-3-2.8 0-1.4.9-2.4 1.8-3.5.3.8.8 1.3 1.5 1.6.1-1.2.5-2.3 1.1-3.3.9 1.4 1.6 2.9 1.6 4.6 0 2-1.3 3.4-3 3.4z"/></svg><span id="racha-n">0</span></button>
+          <button type="button" class="redondo ayuda" id="ayuda" aria-haspopup="dialog" aria-label="Cómo se juega" title="Cómo se juega">?</button>
         </div>
       </div>
       <p class="numero"><span id="numero">&nbsp;</span><button type="button" class="secundario" id="volver-hoy" hidden>Volver a hoy</button></p>
     </header>
     <p class="nota" id="nota" role="status" aria-live="polite"></p>
+
+    <!-- Ayuda: se abre sola la primera vez y luego con el botón «?» -->
+    <dialog class="ventana reglas" id="reglas" aria-labelledby="reglas-titulo">
+      <h2 id="reglas-titulo">Cómo se juega</h2>
+      <ul>
+        <li>Cada día hay una palabra secreta. Escribe cualquier palabra y verás su puesto entre las de significado más parecido: la secreta es la <b>nº 1</b>.</li>
+        <li>Cuanto más bajo el número y más llena la barra, más cerca estás:
+          <div class="escala">
+            <span class="t-ardiendo"><i></i>hasta 100</span>
+            <span class="t-caliente"><i></i>hasta 500</span>
+            <span class="t-templado"><i></i>hasta 2.000</span>
+            <span class="t-frio"><i></i>más lejos</span>
+          </div>
+        </li>
+        <li>Tienes intentos ilimitados. Da igual escribir con tilde o sin ella, y los plurales cuentan como su singular. Si no conozco una palabra, no cuenta como intento.</li>
+        <li>¿Atascado? Toca <b>Pista</b> y te daré una palabra más cercana que la mejor que llevas. Si te rindes (con dos toques), verás la solución.</li>
+        <li>Al terminar verás los <b>aledaños</b>: las palabras más cercanas a la secreta.</li>
+        <li>En el calendario tienes las partidas de los días anteriores.</li>
+        <li>La llama cuenta los días seguidos que juegas la partida del día, aciertes o no. ¡Cuida tu racha!</li>
+      </ul>
+      <button type="button" id="reglas-cerrar">¡A jugar!</button>
+    </dialog>
 
     <dialog class="ventana" id="calendario" aria-label="Días anteriores">
       <div class="cal-cab">
@@ -397,12 +429,6 @@
         <h2>Los aledaños</h2>
         <ol class="lista" id="aledanos-lista"></ol>
         <button type="button" class="secundario mas" id="ver-mas">Ver las 100</button>
-      </section>
-
-      <section class="ayuda" id="ayuda">
-        <h2>Cómo se juega</h2>
-        <p>Hay una palabra secreta. Escribe cualquier palabra y verás su puesto entre las de significado más parecido: la secreta es la nº 1.</p>
-        <p>Cuanto más baja el número y más se llena la barra, más cerca estás. Intentos ilimitados.</p>
       </section>
     </main>
 
@@ -475,7 +501,6 @@
       const pistas = estado.intentos.length - intentos;
       $("cuenta").textContent = `${intentos} ${intentos === 1 ? "intento" : "intentos"}` +
         (pistas ? ` · ${pistas} ${pistas === 1 ? "pista" : "pistas"}` : "");
-      $("ayuda").hidden = estado.intentos.length > 0 || !!estado.fin;
 
       const ultimo = reciente ?? estado.intentos.at(-1)?.i;
       $("ultimo").hidden = ultimo === undefined || !!estado.fin;
@@ -780,9 +805,7 @@
       $("cal-siguiente").addEventListener("click", () => moverMes(1));
       $("calendario").addEventListener("click", (e) => {
         if (e.target === $("calendario")) {
-          const r = $("calendario").getBoundingClientRect();
-          const fuera = e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
-          if (fuera) $("calendario").close();
+          if (fueraDe($("calendario"), e)) $("calendario").close();
           return;
         }
         const d = Number(e.target.closest(".cal-dia[data-dia]")?.dataset.dia);
@@ -792,6 +815,9 @@
         scrollTo(0, 0);
       });
       $("volver-hoy").addEventListener("click", () => cargarDia(hoy));
+      $("ayuda").addEventListener("click", abrirReglas);
+      $("reglas-cerrar").addEventListener("click", () => $("reglas").close());
+      $("reglas").addEventListener("click", (e) => { if (e.target === $("reglas") && fueraDe($("reglas"), e)) $("reglas").close(); });
 
       $("formulario").addEventListener("submit", (e) => {
         e.preventDefault();
@@ -808,6 +834,27 @@
       });
     }
 
+    // Un clic en el fondo oscuro, fuera de la ventana (y no en su relleno), la cierra.
+    function fueraDe(ventana, e) {
+      const r = ventana.getBoundingClientRect();
+      return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+    }
+
+    function abrirReglas() {
+      if ($("reglas").open) return;
+      $("calendario").close();
+      $("reglas").showModal();
+      $("reglas-cerrar").focus({ focusVisible: false });
+    }
+    // La primera vez que se juega, la ayuda se abre sola al irse la portada.
+    function quizaReglas() {
+      try {
+        if (localStorage.getItem("aledanio:reglas-vistas")) return;
+        localStorage.setItem("aledanio:reglas-vistas", "1");
+      } catch { return; }
+      abrirReglas();
+    }
+
     iniciar();
 
     // El año de los derechos es el actual. El correo se monta aquí, a trozos, para que no aparezca entero en los archivos.
@@ -819,7 +866,7 @@
       enlace.textContent = correo;
       $("contacto").append(" · ", enlace);
     }
-    setTimeout(() => $("portada").remove(), 2000);
+    setTimeout(() => { $("portada").remove(); quizaReglas(); }, 2000);
 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("sw.js").catch(() => {});
