@@ -366,7 +366,7 @@
           <div class="escala">
             <span class="t-ardiendo"><i></i>hasta 100</span>
             <span class="t-caliente"><i></i>hasta 500</span>
-            <span class="t-templado"><i></i>hasta 2.000</span>
+            <span class="t-templado"><i></i>hasta 2000</span>
             <span class="t-frio"><i></i>más lejos</span>
           </div>
         </li>
@@ -514,6 +514,9 @@
       if (puesto <= 2000) return "t-templado";
       return "t-frio";
     }
+    // Puestos y cuentas con punto de millar, como pide la RAE, solo desde 10.000: 9999, 10.000, 28.182.
+    const cifra = (n) => (n >= 10000 ? String(n).replace(/\B(?=(\d{3})+$)/g, ".") : String(n));
+
     const CUADRADOS = { "t-1": "🟥", "t-ardiendo": "🟥", "t-caliente": "🟧", "t-templado": "🟨", "t-frio": "🟦" };
 
     function fila(i, { reciente = false, pista = false, probada = false } = {}) {
@@ -521,7 +524,7 @@
       const lleno = Math.max(2, 100 * (1 - Math.log(puesto) / Math.log(vocab.length)));
       const li = document.createElement("li");
       li.className = `fila ${temperatura(puesto)}${reciente ? " reciente" : ""}${probada ? " probada" : ""}`;
-      li.innerHTML = `<span class="pal"></span><span class="barra"><i style="--p:${lleno.toFixed(1)}%"></i></span><span class="pos">${puesto}</span>`;
+      li.innerHTML = `<span class="pal"></span><span class="barra"><i style="--p:${lleno.toFixed(1)}%"></i></span><span class="pos">${cifra(puesto)}</span>`;
       li.querySelector(".pal").textContent = vocab[i];
       if (pista) li.querySelector(".pal").insertAdjacentHTML("beforeend", " <small>(pista)</small>");
       return li;
@@ -530,7 +533,7 @@
     function pintar(reciente) {
       const intentos = estado.intentos.filter((t) => !t.pista).length;
       const pistas = estado.intentos.length - intentos;
-      $("cuenta").textContent = `${intentos} ${intentos === 1 ? "intento" : "intentos"}` +
+      $("cuenta").textContent = `${cifra(intentos)} ${intentos === 1 ? "intento" : "intentos"}` +
         (pistas ? ` · ${pistas} ${pistas === 1 ? "pista" : "pistas"}` : "");
 
       const ultimo = reciente ?? estado.intentos.at(-1)?.i;
@@ -552,7 +555,7 @@
       $("final").hidden = false;
       $("final-titulo").textContent = estado.fin === "resuelto" ? "¡Lo has encontrado!" : "La palabra era";
       $("solucion").textContent = palabra;
-      const partes = [`${intentos} ${intentos === 1 ? "intento" : "intentos"}`];
+      const partes = [`${cifra(intentos)} ${intentos === 1 ? "intento" : "intentos"}`];
       if (pistas) partes.push(`${pistas} ${pistas === 1 ? "pista" : "pistas"}`);
       partes.push(`racha: ${rachaActual()} ${rachaActual() === 1 ? "día" : "días"}`);
       $("final-datos").textContent = partes.join(" · ");
@@ -772,7 +775,7 @@
     function textoCompartir() {
       const intentos = estado.intentos.filter((t) => !t.pista);
       const pistas = estado.intentos.length - intentos.length;
-      let cabecera = `Aledaño #${num} · ${intentos.length} ${intentos.length === 1 ? "intento" : "intentos"}`;
+      let cabecera = `Aledaño #${num} · ${cifra(intentos.length)} ${intentos.length === 1 ? "intento" : "intentos"}`;
       if (pistas) cabecera += ` · ${pistas} ${pistas === 1 ? "pista" : "pistas"}`;
       if (estado.fin === "rendido") cabecera += " · me rendí";
       let cuadrados = intentos.map((t) => CUADRADOS[temperatura(rango[t.i])]);
