@@ -45,19 +45,154 @@
       margin: 0 auto;
       padding: 20px 16px 48px;
     }
-    header { text-align: center; margin-bottom: 20px; }
+    header { margin-bottom: 20px; }
+    .cabecera { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     h1 {
       margin: 0;
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 12px;
-      font-size: 2.5rem;
+      gap: 10px;
+      min-width: 0;
+      font-size: 2rem;
       letter-spacing: -0.03em;
     }
     h1 .titulo span { color: var(--accent); }
     h1 img { width: 40px; height: 40px; flex: none; }
-    .numero { margin: 4px 0 0; color: var(--muted); font-size: 0.95rem; }
+    .numero {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 30px;
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .numero button { padding: 3px 12px; border-radius: 999px; font-size: 0.85rem; }
+
+    /* Esquina superior derecha: calendario y racha */
+    .barra { display: flex; align-items: center; gap: 6px; flex: none; }
+    .redondo {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--fg);
+    }
+    .redondo svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+    .racha {
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 12px 0 9px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--muted);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .racha svg { width: 16px; height: 16px; fill: currentColor; }
+    .racha.hoy { background: var(--t-ardiendo); border-color: var(--t-ardiendo); color: #fff; }
+    .racha.pendiente { border: 1px dashed var(--t-ardiendo); color: var(--accent); }
+    .redondo:focus-visible, .racha:focus-visible, .cal-dia:focus-visible, .cal-mes:focus-visible {
+      outline: 3px solid var(--fg);
+      outline-offset: 2px;
+    }
+
+    .nota {
+      position: fixed;
+      left: 50%;
+      top: 76px;
+      z-index: 5;
+      width: max-content;
+      max-width: calc(100vw - 32px);
+      padding: 10px 16px;
+      border-radius: 12px;
+      background: var(--fg);
+      color: var(--bg);
+      font-size: 0.95rem;
+      text-align: center;
+      transform: translateX(-50%);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+    .nota.visible { opacity: 1; visibility: visible; }
+
+    /* Calendario */
+    .ventana {
+      width: min(360px, calc(100vw - 32px));
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+      color: var(--fg);
+    }
+    .ventana[open] { display: flex; flex-direction: column; gap: 10px; }
+    .ventana::backdrop { background: rgba(31, 29, 26, 0.45); }
+    .cal-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .cal-cab h2 { margin: 0; font-size: 1.1rem; letter-spacing: 0; text-transform: none; color: var(--fg); }
+    .cal-cab h2::first-letter { text-transform: uppercase; }
+    .cal-mes {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--fg);
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+    .cal-mes:disabled { visibility: hidden; }
+    .cal-semana, .cal-rejilla { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+    .cal-semana span { font-size: 0.72rem; font-weight: 700; color: var(--muted); }
+    .cal-dia {
+      position: relative;
+      aspect-ratio: 1;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      background: none;
+      color: var(--fg);
+      font-size: 0.9rem;
+      font-weight: 400;
+    }
+    .cal-dia.vacio { visibility: hidden; }
+    .cal-dia:disabled { color: var(--muted); opacity: 0.45; cursor: default; }
+    button.cal-dia:not(:disabled) { background: var(--bg); font-weight: 700; }
+    .cal-dia.jugado::after {
+      content: "";
+      position: absolute;
+      bottom: 13%;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    button.cal-dia.resuelto { background: var(--t-ardiendo); color: #fff; }
+    .cal-dia.resuelto::after { display: none; }
+    button.cal-dia.rendido { background: var(--t-templado); }
+    .cal-dia.rendido::after { display: none; }
+    .cal-dia.hoy { color: var(--accent); }
+    .cal-dia.resuelto.hoy { color: #fff; }
+    .cal-dia.actual { border-color: var(--fg); }
+    .cal-leyenda { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.75rem; color: var(--muted); }
+    .cal-leyenda span { display: inline-flex; align-items: center; gap: 5px; }
+    .cal-leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+    .l-jugado { background: var(--accent); transform: scale(0.6); }
+    .l-resuelto { background: var(--t-ardiendo); }
+    .l-rendido { background: var(--t-templado); }
+    .cal-racha { margin: 0; font-size: 0.9rem; color: var(--muted); text-align: center; }
     h2 {
       margin: 24px 0 8px;
       font-size: 0.8rem;
@@ -192,9 +327,29 @@
 
   <div class="pagina">
     <header>
-      <h1><img src="logo.svg" alt="" width="40" height="40"><span class="titulo">Aleda<span>ñ</span>o</span></h1>
-      <p class="numero" id="numero">&nbsp;</p>
+      <div class="cabecera">
+        <h1><img src="logo.svg" alt="" width="40" height="40"><span class="titulo">Aleda<span>ñ</span>o</span></h1>
+        <div class="barra">
+          <button type="button" class="redondo" id="abrir-calendario" aria-haspopup="dialog" aria-label="Días anteriores" title="Días anteriores"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+          <button type="button" class="racha" id="racha"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M13.6 2c.4 3-.9 4.8-2.3 6.4-.6-1.1-1.5-1.9-2.7-2.3.5 2-.4 3.5-1.5 5.1C6.1 12.6 5.3 14.1 5.3 16c0 3.6 3 6.2 6.7 6.2s6.7-2.6 6.7-6.2c0-2.7-1.3-4.8-2.5-6.8-1.2-1.9-2.3-3.9-2.6-7.2zM12 20.4c-1.7 0-3-1.2-3-2.8 0-1.4.9-2.4 1.8-3.5.3.8.8 1.3 1.5 1.6.1-1.2.5-2.3 1.1-3.3.9 1.4 1.6 2.9 1.6 4.6 0 2-1.3 3.4-3 3.4z"/></svg><span id="racha-n">0</span></button>
+        </div>
+      </div>
+      <p class="numero"><span id="numero">&nbsp;</span><button type="button" class="secundario" id="volver-hoy" hidden>Volver a hoy</button></p>
     </header>
+    <p class="nota" id="nota" role="status" aria-live="polite"></p>
+
+    <dialog class="ventana" id="calendario" aria-label="Días anteriores">
+      <div class="cal-cab">
+        <button type="button" class="cal-mes" id="cal-anterior" aria-label="Mes anterior">‹</button>
+        <h2 id="cal-titulo"></h2>
+        <button type="button" class="cal-mes" id="cal-siguiente" aria-label="Mes siguiente">›</button>
+      </div>
+      <div class="cal-semana" aria-hidden="true"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+      <div class="cal-rejilla" id="cal-rejilla"></div>
+      <div class="cal-leyenda"><span><i class="l-jugado"></i>Empezado</span><span><i class="l-resuelto"></i>Resuelto</span><span><i class="l-rendido"></i>Rendido</span></div>
+      <p class="cal-racha" id="cal-racha"></p>
+      <button type="button" id="cal-cerrar">Cerrar</button>
+    </dialog>
 
     <p class="mensaje" id="mensaje">Cargando…</p>
 
@@ -250,7 +405,7 @@
     const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
     const $ = (id) => document.getElementById(id);
 
-    let vocab, rango, orden, num, palabra, estado, racha;
+    let vocab, rango, orden, num, palabra, estado, hoy, jugados;
     const exactas = new Map();
     const sinTildes = new Map();
 
@@ -346,20 +501,101 @@
       $("aledanos").hidden = false;
     }
 
-    function rachaActual() {
-      return racha.ultimo >= num - 1 ? racha.actual : 0;
+    // ---------- racha: días seguidos jugando la partida de su día ----------
+    // Basta con jugar (un intento, una pista o rendirse); no hace falta acertar.
+    // Sigue viva si hoy aún no has jugado pero sí ayer; se rompe al saltarte un día entero.
+    function rachaHasta(d) {
+      let n = 0;
+      while (d >= 1 && jugados[d]) { n++; d--; }
+      return n;
+    }
+    const rachaActual = () => rachaHasta(jugados[hoy] ? hoy : hoy - 1);
+    function rachaMejor() {
+      let mejor = 0, n = 0;
+      for (let d = 1; d <= hoy; d++) { n = jugados[d] ? n + 1 : 0; mejor = Math.max(mejor, n); }
+      return mejor;
+    }
+    const dias = (n) => `${n} ${n === 1 ? "día" : "días"}`;
+
+    function pintarRacha() {
+      const r = rachaActual(), hoyJugado = !!jugados[hoy];
+      $("racha-n").textContent = r;
+      $("racha").className = "racha" + (hoyJugado ? " hoy" : r ? " pendiente" : "");
+      $("racha").setAttribute("aria-label", `Racha: ${dias(r)} seguidos` + (hoyJugado || !r ? "" : ". Juega hoy para mantenerla"));
+    }
+
+    function marcarJugado() {
+      if (num !== hoy || jugados[hoy]) return;
+      jugados[hoy] = 1;
+      guardar("aledanio:jugados", jugados);
+      pintarRacha();
+    }
+
+    let notaTemporizador;
+    function nota(texto) {
+      $("nota").textContent = texto;
+      $("nota").classList.add("visible");
+      clearTimeout(notaTemporizador);
+      notaTemporizador = setTimeout(() => $("nota").classList.remove("visible"), 2600);
+    }
+
+    function notaRacha() {
+      const r = rachaActual(), m = rachaMejor(), hoyJugado = !!jugados[hoy];
+      nota(r ? `Racha: ${dias(r)} · Mejor: ${dias(m)}` + (hoyJugado ? "" : " · ¡Juega hoy para mantenerla!")
+        : m ? `Sin racha ahora · Mejor: ${dias(m)} · ¡Juega hoy para empezar otra!`
+        : "Juega la partida de hoy para empezar una racha");
     }
 
     function terminar(fin) {
       estado.fin = fin;
-      if (fin === "resuelto") {
-        if (racha.ultimo === num - 1) racha.actual += 1;
-        else if (racha.ultimo !== num) racha.actual = 1;
-      } else {
-        racha.actual = 0;
+      marcarJugado();
+    }
+
+    // ---------- calendario de días anteriores ----------
+    // Un mes cada vez (semana de lunes a domingo); se pueden abrir los días del nº 1 a hoy.
+    let calMes;
+    const fechaDe = (d) => new Date(INICIO + (d - 1) * 86400000);
+    function estadoDe(d) {
+      const e = leer(`aledanio:dia:${d}`, null);
+      return { jugado: !!e?.intentos?.length, fin: e?.fin ?? null };
+    }
+
+    function pintarCalendario() {
+      const { y, m } = calMes;
+      const ini = fechaDe(1), fin = fechaDe(Math.max(hoy, 1));
+      const primero = new Date(Date.UTC(y, m, 1));
+      const diasMes = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      const nombreMes = primero.toLocaleDateString("es-ES", { month: "long", timeZone: "UTC" });
+      $("cal-titulo").textContent = `${nombreMes} de ${y}`;
+      $("cal-anterior").disabled = y * 12 + m <= ini.getUTCFullYear() * 12 + ini.getUTCMonth();
+      $("cal-siguiente").disabled = y * 12 + m >= fin.getUTCFullYear() * 12 + fin.getUTCMonth();
+
+      let html = '<span class="cal-dia vacio"></span>'.repeat((primero.getUTCDay() + 6) % 7);
+      for (let n = 1; n <= diasMes; n++) {
+        const d = Math.round((Date.UTC(y, m, n) - INICIO) / 86400000) + 1;
+        if (d < 1 || d > hoy) { html += `<button class="cal-dia" type="button" disabled>${n}</button>`; continue; }
+        const e = estadoDe(d);
+        const clases = (e.fin ? ` ${e.fin}` : e.jugado ? " jugado" : "") + (d === hoy ? " hoy" : "") + (d === num ? " actual" : "");
+        const desc = `nº ${d}${d === hoy ? ", hoy" : ""}${e.fin === "resuelto" ? ", resuelto" : e.fin === "rendido" ? ", rendido" : e.jugado ? ", empezado" : ""}`;
+        html += `<button class="cal-dia${clases}" type="button" data-dia="${d}" aria-label="${n} de ${nombreMes}, ${desc}"${d === num ? ' aria-current="date"' : ""}>${n}</button>`;
       }
-      racha.ultimo = num;
-      guardar("aledanio:racha", racha);
+      $("cal-rejilla").innerHTML = html;
+      const r = rachaActual(), mejor = rachaMejor();
+      $("cal-racha").textContent = `Racha: ${dias(r)} · Mejor: ${dias(mejor)}`;
+    }
+
+    function abrirCalendario() {
+      const f = fechaDe(Math.min(Math.max(num, 1), Math.max(hoy, 1)));
+      calMes = { y: f.getUTCFullYear(), m: f.getUTCMonth() };
+      pintarCalendario();
+      $("calendario").showModal();
+      $("calendario").querySelector(".cal-dia.actual")?.focus({ focusVisible: false });
+    }
+
+    function moverMes(paso) {
+      const total = calMes.y * 12 + calMes.m + paso;
+      calMes = { y: Math.floor(total / 12), m: total % 12 };
+      pintarCalendario();
     }
 
     function probar(texto) {
@@ -375,6 +611,7 @@
       aviso.textContent = "";
       estado.intentos.push({ p: vocab[i], i });
       if (rango[i] === 1) terminar("resuelto");
+      marcarJugado();
       guardarEstado();
       pintar(i);
     }
@@ -392,6 +629,7 @@
       const i = orden[objetivo - 1];
       $("aviso").textContent = "";
       estado.intentos.push({ p: vocab[i], i, pista: true });
+      marcarJugado();
       guardarEstado();
       pintar(i);
     }
@@ -439,49 +677,112 @@
       }
     }
 
-    function sinPartida() {
-      $("mensaje").textContent = "Vuelve pronto: estamos preparando nuevas palabras";
+    function mostrarMensaje(texto) {
+      $("juego").hidden = true;
+      $("mensaje").hidden = false;
+      $("mensaje").textContent = texto;
+    }
+    const sinPartida = () => mostrarMensaje("Vuelve pronto: estamos preparando nuevas palabras");
+
+    let cargaVocabulario;
+    function cargarVocabulario() {
+      cargaVocabulario ??= fetch("data/vocabulario.json").then((r) => {
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      }).then((lista) => {
+        vocab = lista;
+        vocab.forEach((w, i) => {
+          exactas.set(w, i);
+          const clave = normalizar(w);
+          if (!sinTildes.has(clave)) sinTildes.set(clave, i);
+        });
+      }).catch((e) => { cargaVocabulario = null; throw e; });
+      return cargaVocabulario;
     }
 
-    async function iniciar() {
-      const parametro = Number(new URLSearchParams(location.search).get("dia"));
-      num = Number.isInteger(parametro) && parametro >= 1 ? parametro : hoyEnMadrid();
-      if (num < 1) return sinPartida();
-
-      const nnn = String(num).padStart(3, "0");
-      let dia;
-      try {
-        const [rv, rd] = await Promise.all([fetch("data/vocabulario.json"), fetch(`data/dia-${nnn}.json`)]);
-        if (!rv.ok || !rd.ok) return sinPartida();
-        [vocab, dia] = await Promise.all([rv.json(), rd.json()]);
-      } catch {
-        $("mensaje").textContent = "No se ha podido cargar la partida. Comprueba tu conexión.";
-        return;
+    // Carga la partida del día n (hoy o uno anterior) sin recargar la página.
+    // La partida anterior sigue en pantalla, y es la que recibe los intentos, hasta que llegan los datos.
+    let diaPedido;
+    async function cargarDia(n) {
+      diaPedido = n;
+      let dia = null, error = false;
+      if (n >= 1) {
+        try {
+          const [, rd] = await Promise.all([cargarVocabulario(), fetch(`data/dia-${String(n).padStart(3, "0")}.json`)]);
+          if (rd.ok) dia = await rd.json();
+        } catch {
+          error = true;
+        }
       }
+      if (diaPedido !== n) return; // se ha pedido otro día mientras tanto
+
+      num = n;
+      const fecha = fechaDe(n);
+      $("numero").textContent = n >= 1 ? `Nº ${n} · ${fecha.getUTCDate()} ${MESES[fecha.getUTCMonth()]}` : "";
+      $("volver-hoy").hidden = n === hoy || hoy < 1;
+      if (error) return mostrarMensaje("No se ha podido cargar la partida. Comprueba tu conexión.");
+      if (!dia) return sinPartida();
 
       orden = dia.orden;
       palabra = vocab[orden[0]];
       rango = new Int32Array(vocab.length);
       orden.forEach((i, puesto) => { rango[i] = puesto + 1; });
-      vocab.forEach((w, i) => {
-        exactas.set(w, i);
-        const clave = normalizar(w);
-        if (!sinTildes.has(clave)) sinTildes.set(clave, i);
-      });
-
-      const [, m, d] = dia.fecha.split("-").map(Number);
-      $("numero").textContent = `Nº ${num} · ${d} ${MESES[m - 1]}`;
 
       // Se guardan las palabras, no los índices, por si el vocabulario se regenera.
-      estado = leer(`aledanio:dia:${num}`, { intentos: [], fin: null });
+      estado = leer(`aledanio:dia:${n}`, { intentos: [], fin: null });
       estado.intentos = estado.intentos
         .map((t) => ({ ...t, i: exactas.get(t.p) }))
         .filter((t) => t.i !== undefined);
-      racha = leer("aledanio:racha", { ultimo: 0, actual: 0 });
+
+      // Todo limpio para el día nuevo.
+      clearTimeout(rendirseTemporizador);
+      $("rendirse").classList.remove("confirmar");
+      $("rendirse").textContent = "Rendirse";
+      $("entrada").value = "";
+      $("aviso").textContent = "";
+      $("copiado").textContent = "";
+      $("controles").hidden = false;
+      $("final").hidden = true;
+      $("aledanos").hidden = true;
+      delete $("aledanos").dataset.todas;
 
       $("mensaje").hidden = true;
       $("juego").hidden = false;
       pintar();
+    }
+
+    function iniciar() {
+      hoy = hoyEnMadrid();
+      jugados = leer("aledanio:jugados", {});
+      // Partidas de hoy empezadas antes de que existiera la racha.
+      if (leer(`aledanio:dia:${hoy}`, null)?.intentos?.length && !jugados[hoy]) {
+        jugados[hoy] = 1;
+        guardar("aledanio:jugados", jugados);
+      }
+      pintarRacha();
+
+      const parametro = Number(new URLSearchParams(location.search).get("dia"));
+      cargarDia(Number.isInteger(parametro) && parametro >= 1 ? parametro : hoy);
+
+      $("racha").addEventListener("click", notaRacha);
+      $("abrir-calendario").addEventListener("click", abrirCalendario);
+      $("cal-cerrar").addEventListener("click", () => $("calendario").close());
+      $("cal-anterior").addEventListener("click", () => moverMes(-1));
+      $("cal-siguiente").addEventListener("click", () => moverMes(1));
+      $("calendario").addEventListener("click", (e) => {
+        if (e.target === $("calendario")) {
+          const r = $("calendario").getBoundingClientRect();
+          const fuera = e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+          if (fuera) $("calendario").close();
+          return;
+        }
+        const d = Number(e.target.closest(".cal-dia[data-dia]")?.dataset.dia);
+        if (!d) return;
+        $("calendario").close();
+        if (d !== num) cargarDia(d);
+        scrollTo(0, 0);
+      });
+      $("volver-hoy").addEventListener("click", () => cargarDia(hoy));
 
       $("formulario").addEventListener("submit", (e) => {
         e.preventDefault();
