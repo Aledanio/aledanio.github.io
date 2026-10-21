@@ -42,9 +42,16 @@
     }
     .pagina {
       max-width: 520px;
+      min-height: 100dvh;
       margin: 0 auto;
-      padding: 20px 16px 48px;
+      padding: 20px 16px 16px;
+      display: flex;
+      flex-direction: column;
     }
+    /* pie con la autoría: abajo del todo aunque el juego no llene la pantalla */
+    .pie { margin-top: auto; padding-top: 40px; text-align: center; font-size: 0.75rem; color: var(--muted); }
+    .pie a { color: inherit; text-underline-offset: 0.15em; white-space: nowrap; }
+    .pie a:hover { color: var(--fg); }
     header { margin-bottom: 20px; }
     .cabecera { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     h1 {
@@ -398,6 +405,8 @@
         <p>Cuanto más baja el número y más se llena la barra, más cerca estás. Intentos ilimitados.</p>
       </section>
     </main>
+
+    <footer class="pie">© <span id="anio-derechos">2026</span> Emilio Casanova Biscarri<span id="contacto"></span></footer>
   </div>
 
   <script>
@@ -800,6 +809,16 @@
     }
 
     iniciar();
+
+    // El año de los derechos es el actual. El correo se monta aquí, a trozos, para que no aparezca entero en los archivos.
+    $("anio-derechos").textContent = new Date().getFullYear();
+    {
+      const correo = "ecasanovabisc" + "@" + ["gmail", "com"].join(".");
+      const enlace = document.createElement("a");
+      enlace.href = "mailto:" + correo;
+      enlace.textContent = correo;
+      $("contacto").append(" · ", enlace);
+    }
     setTimeout(() => $("portada").remove(), 2000);
 
     if ("serviceWorker" in navigator) {
