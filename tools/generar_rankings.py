@@ -52,6 +52,8 @@ DIAS = [
 
 N_FRECUENTES = 60000
 SOLO_LETRAS = re.compile(r"^[a-záéíóúüñ]{3,}$")
+# Risas escritas (jaja, jajajaja, jejeje…): no son palabras del juego.
+RISA = re.compile(r"^(?:(?:ja){2,}|(?:je){2,}|(?:ji){2,}|(?:jo){2,})j?$")
 CATEGORIAS = {"NOUN", "VERB", "ADJ", "ADV"}
 
 # Palabrotas e insultos que no queremos en el juego. tools/excluir.txt amplía esta lista.
@@ -81,7 +83,7 @@ def leer_excluidas():
 def construir_vocabulario(nlp, excluidas):
     candidatas = [
         w for w in top_n_list("es", N_FRECUENTES)
-        if SOLO_LETRAS.match(w) and w not in excluidas and w not in PALABROTAS
+        if SOLO_LETRAS.match(w) and not RISA.match(w) and w not in excluidas and w not in PALABROTAS
     ]
     candidatas = [w for w in candidatas if nlp.vocab.has_vector(w)]
     print(f"Candidatas con vector: {len(candidatas)}", file=sys.stderr)
