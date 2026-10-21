@@ -34,6 +34,20 @@ DIAS = [
     "nieve", "espejo", "queso", "reloj", "calabaza",
     "faro", "mariposa", "café", "montaña", "sombrero",
     "perro", "cuchillo", "maleta", "bosque", "volcán",
+    # Del 31 de octubre al 31 de diciembre de 2026 (nº 21 a 82)
+    "fantasma", "cementerio", "lápiz", "ballena", "cocina",
+    "luna", "castillo", "zapato", "tomate", "pirata",
+    "tormenta", "teléfono", "caballo", "miel", "isla",
+    "escalera", "médico", "seta", "película", "búho",
+    "llave", "sopa", "planeta", "iglesia", "pintor",
+    "almohada", "tiburón", "periódico", "limón", "rey",
+    "puente", "bufanda", "pájaro", "ordenador", "tortilla",
+    "brújula", "teatro", "oveja", "lámpara", "río",
+    "huevo", "circo", "martillo", "desierto", "carta",
+    "jabón", "granja", "cohete", "chocolate", "corona",
+    "chimenea", "reno", "lotería", "turrón", "villancico",
+    "regalo", "campana", "manta", "broma", "tesoro",
+    "dragón", "uva",
 ]
 
 N_FRECUENTES = 60000
