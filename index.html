@@ -558,6 +558,7 @@
 
   <script>
     const INICIO = Date.UTC(2026, 9, 11); // día nº 1
+    const DIAS = 82; // partidas en data/; al acabarse, el ciclo vuelve a empezar
     const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
     const $ = (id) => document.getElementById(id);
 
@@ -1174,7 +1175,7 @@
       if (n >= 1) {
         try {
           const [, rd] = await Promise.all([
-            cargarVocabulario(), fetch(`data/dia-${String(n).padStart(3, "0")}.json`), cargarFormas(), cargarComunes(),
+            cargarVocabulario(), fetch(`data/dia-${String((n - 1) % DIAS + 1).padStart(3, "0")}.json`), cargarFormas(), cargarComunes(),
           ]);
           if (rd.ok) dia = await rd.json();
         } catch {

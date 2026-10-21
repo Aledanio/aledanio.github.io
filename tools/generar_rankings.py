@@ -12,7 +12,7 @@ ejecutar el script. Para rescatar palabras comunes que el script toma por
 nombres propios (el Ayuntamiento), añádelas a tools/incluir.txt. Los plurales
 cuyo singular está en el vocabulario salen de él, salvo los de significado
 propio (gafas, martes), que van en tools/plurales_propios.txt. Para añadir
-días, amplía la lista DIAS.
+días, amplía la lista DIAS y actualiza la constante DIAS de index.html.
 
 Además de los rankings, escribe data/formas.json con las formas flexionadas
 (corriendo, pintaba, grandes) que el juego cuenta como su palabra del vocabulario, y
