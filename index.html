@@ -738,6 +738,7 @@
     // La partida anterior sigue en pantalla, y es la que recibe los intentos, hasta que llegan los datos.
     let diaPedido;
     async function cargarDia(n) {
+      if (n > hoy) n = hoy; // los días futuros no se pueden jugar
       diaPedido = n;
       let dia = null, error = false;
       if (n >= 1) {
@@ -802,8 +803,9 @@
       }
       pintarRacha();
 
+      // ?dia=N abre un día anterior; si N es de un día futuro, se abre el de hoy.
       const parametro = Number(new URLSearchParams(location.search).get("dia"));
-      cargarDia(Number.isInteger(parametro) && parametro >= 1 ? parametro : hoy);
+      cargarDia(Number.isInteger(parametro) && parametro >= 1 && parametro <= hoy ? parametro : hoy);
 
       $("racha").addEventListener("click", notaRacha);
       $("abrir-calendario").addEventListener("click", abrirCalendario);
