@@ -19,6 +19,11 @@ Además de los rankings, escribe data/formas.json con las formas flexionadas
 data/comunes.json con las palabras gramaticales (el, de, que, yo, muy), que el juego
 rechaza sin contarlas como intento.
 
+Los femeninos que solo son una forma del adjetivo o del participio (hecha, supuesta)
+cuentan como su masculino, que es el que entra en el vocabulario. Los que tienen
+significado propio (dicha, comida) se quedan como palabra y van en
+tools/femeninos_propios.txt.
+
 Solo entran palabras que reconoce el diccionario ortográfico de español de
 LibreOffice (proyecto RLA-ES, que sigue la norma de la RAE), guardado en
 tools/diccionario/ con su licencia. Así quedan fuera extranjerismos y erratas.
@@ -43,6 +48,7 @@ DATOS = RAIZ / "data"
 EXCLUIR = Path(__file__).resolve().parent / "excluir.txt"
 INCLUIR = Path(__file__).resolve().parent / "incluir.txt"
 PLURALES_PROPIOS = Path(__file__).resolve().parent / "plurales_propios.txt"
+FEMENINOS_PROPIOS = Path(__file__).resolve().parent / "femeninos_propios.txt"
 DICCIONARIO = Path(__file__).resolve().parent / "diccionario" / "es"
 
 INICIO = date(2026, 10, 11)
@@ -116,6 +122,10 @@ def leer_lista(ruta):
 
 # Palabras que se usan en plural y no deben fundirse con su singular (martes ≠ marte).
 PLURALES = leer_lista(PLURALES_PROPIOS)
+# Femeninos con significado propio: no pasan a su masculino (dicha ≠ dicho, comida ≠ comido).
+FEMENINOS = leer_lista(FEMENINOS_PROPIOS)
+# Un masculino solo sustituye a su femenino si se usa de verdad (hecho sí, manero no).
+FRECUENCIA_MASCULINO = 2.0
 # Plurales que cambian la tilde de sitio.
 PLURALES_IRREGULARES = {"régimen": "regímenes", "carácter": "caracteres", "espécimen": "especímenes"}
 
@@ -197,6 +207,7 @@ def construir_vocabulario(nlp, excluidas, incluidas):
         if palabra not in vocab:
             print(f"Añadiendo palabra del día que faltaba: {palabra}", file=sys.stderr)
             vocab.append(palabra)
+    vocab, femeninos = elegir_masculinos(nlp, diccionario, vocab, excluidas)
 
     # Los plurales cuentan como su singular: fuera los que aún conviven con él (dioses y dios).
     conjunto = set(vocab)
@@ -210,7 +221,63 @@ def construir_vocabulario(nlp, excluidas, incluidas):
             fundidos[w] = singular
     print(f"Plurales que salen del vocabulario ({len(fundidos)}):\n  "
           + ", ".join(f"{p} → {s}" for p, s in fundidos.items()), file=sys.stderr)
+    fundidos.update(femeninos)
     return [w for w in vocab if w not in fundidos], fundidos
+
+
+def es_femenino_de(diccionario, f, m):
+    """f es el femenino de m según el diccionario: sale de m con el sufijo de género (G),
+    con o sin prefijo (tomada de tomado, inmediata de in+mediato), o los dos son el
+    participio del mismo verbo (llevada y llevado, de llevar, con el sufijo D)."""
+    def participio_de(w):
+        return {x.stem for x in diccionario.lookuper.good_forms(w) if x.suffix and x.suffix.flag == "D"}
+    lecturas = list(diccionario.lookuper.good_forms(f))
+    if any(x.suffix and x.suffix.flag == "G" and m.endswith(x.stem) for x in lecturas):
+        return True
+    return bool(re.search("(?:ad|id|íd)o$", m) and participio_de(f) & participio_de(m))
+
+
+def elegir_masculinos(nlp, diccionario, vocab, excluidas):
+    """Femeninos del vocabulario cuyo masculino falta (hecha sin hecho, dicha sin dicho).
+
+    Si el masculino es una palabra de uso real, entra en el vocabulario. El femenino
+    pasa a ser una forma suya (hecha → hecho, argentinas → argentino), salvo los de
+    tools/femeninos_propios.txt y las palabras de los días, que se quedan también
+    (dicha y dicho). Devuelve el vocabulario y el mapa femenino → masculino.
+    """
+    conjunto = set(vocab)
+    def valido(m):
+        return (m not in conjunto and m not in excluidas and m not in PALABROTAS
+                and nlp.vocab.has_vector(m) and zipf_frequency(m, "es") >= FRECUENCIA_MASCULINO)
+
+    nuevo, femeninos, anadidos = [], {}, []
+    for w in vocab:
+        propio = w in FEMENINOS or w in PLURALES or w in DIAS
+        if w.endswith("as") and w[:-1] not in conjunto and not propio:
+            # Plural femenino que quedó sin singular: cuenta como el masculino (chinas → chino).
+            m = w[:-2] + "o"
+            if m in conjunto and es_femenino_de(diccionario, w[:-1], m):
+                femeninos[w] = m
+                nuevo.append(w)
+                continue
+        if w.endswith("a") and valido(w[:-1] + "o") and es_femenino_de(diccionario, w, w[:-1] + "o"):
+            m = w[:-1] + "o"
+            conjunto.add(m)
+            anadidos.append(m)
+            if propio:
+                nuevo += [w, m]
+            else:
+                femeninos[w] = m
+                femeninos[w + "s"] = m
+                nuevo.append(m)
+            continue
+        nuevo.append(w)
+    print(f"Masculinos que entran en el vocabulario ({len(anadidos)}):\n  " + ", ".join(anadidos),
+          file=sys.stderr)
+    print(f"Femeninos que pasan a su masculino ({len(femeninos)}):\n  "
+          + ", ".join(f"{f} → {m}" for f, m in femeninos.items() if not f.endswith("as") or f[:-1] not in femeninos),
+          file=sys.stderr)
+    return nuevo, femeninos
 
 
 def singular_de(w, conjunto, por_clave):
@@ -399,9 +466,11 @@ def generar_formas(nlp, vocab, fundidos):
         formas = list(expandir(raiz, banderas & (NOMINALES | VERBALES)))
         if not formas:
             continue
-        # El lema es la propia entrada; si no está, una de sus formas de género (abuelo → abuela).
+        # El lema es la propia entrada; si no está, una de sus formas de género (abuelo → abuela),
+        # salvo si ese femenino tiene significado propio (dicho no es dicha).
         lema = raiz if raiz in en_vocab else next(
-            (f for b, f in formas if b == "G" and f in en_vocab and not f.endswith("s")), None
+            (f for b, f in formas if b == "G" and f in en_vocab and not f.endswith("s") and f not in FEMENINOS),
+            None,
         )
         if not lema:
             continue
@@ -409,6 +478,14 @@ def generar_formas(nlp, vocab, fundidos):
             proponer(raiz, lema, True)
         for bandera, forma in formas:
             proponer(forma, lema, bandera in NOMINALES)
+    # Femeninos de adjetivos que el diccionario forma con prefijo (pro+funda, in+mediata):
+    # la expansión de arriba solo ve los sufijos.
+    for w in vocab:
+        f = w[:-1] + "a"
+        if w.endswith("o") and f not in en_vocab and es_femenino_de(diccionario, f, w):
+            proponer(f, w, True)
+            if diccionario.lookup(f + "s"):
+                proponer(f + "s", w, True)
     for plural, singular in fundidos.items():
         candidatas[plural] = (True, 99, singular)
 

@@ -170,3 +170,6 @@ cuarenta
 cincuenta
 cien
 mil
+
+# Sustituye a «parta», que es «partir» en subjuntivo
+parto

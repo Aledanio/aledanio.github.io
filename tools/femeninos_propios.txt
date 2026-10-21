@@ -1,0 +1,101 @@
+# Femeninos con significado propio: se quedan en el vocabulario y no pasan a su masculino
+# (dicha ≠ dicho, comida ≠ comido). Los demás femeninos cuyo masculino se usa (hecha,
+# supuesta, tomada) cuentan como el masculino, que es el que entra en el vocabulario.
+# Si el masculino es también palabra del juego (dicho), entra con su propio puesto; si
+# no lo es, se veta en tools/excluir.txt: los participios cuentan entonces como su verbo
+# (comido → comer) y las conjugaciones y rarezas, como lo que sean (noto → notar).
+# Una por línea; las líneas que empiezan por # se ignoran. Después de editar, vuelve a
+# ejecutar tools/generar_rankings.py.
+
+# El masculino también es palabra del juego
+dicha
+junta
+baja
+falta
+parada
+bebida
+corrida
+aguada
+ceniza
+aceituna
+morcilla
+zapatera
+
+# El masculino es un participio y cuenta como su verbo
+vista
+comida
+salida
+llegada
+caída
+ida
+sida
+acogida
+cabida
+huida
+venida
+tenida
+sacudida
+escapada
+alzada
+cogida
+pisada
+acampada
+recaída
+embestida
+arrancada
+acometida
+parida
+pitada
+madrugada
+goleada
+bajada
+arribada
+medida
+
+# El masculino no es palabra del juego
+manera
+queda
+nota
+entrevista
+rosa
+quita
+pinta
+bota
+funda
+panda
+chapa
+cana
+tata
+cava
+cesárea
+paria
+tita
+soma
+pacha
+nona
+conga
+celestina
+lasa
+nubla
+chacha
+montera
+fata
+pancha
+cucha
+meda
+longa
+greca
+manola
+masa
+teta
+ruana
+añada
+manzanera
+inclusa
+
+# Plurales femeninos con significado propio (en aras de, volver a las andadas)
+aras
+andadas
+jaras
+guineas
+macedonias
