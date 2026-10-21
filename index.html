@@ -694,7 +694,7 @@
       const r = rachaActual(), hoyJugado = !!jugados[hoy];
       $("racha-n").textContent = r;
       $("racha").className = "racha" + (hoyJugado ? " hoy" : r ? " pendiente" : "");
-      $("racha").setAttribute("aria-label", `Racha: ${dias(r)} seguidos` + (hoyJugado || !r ? "" : ". Juega hoy para mantenerla"));
+      $("racha").setAttribute("aria-label", `Racha: ${dias(r)} ${r === 1 ? "seguido" : "seguidos"}` + (hoyJugado || !r ? "" : ". Juega hoy para mantenerla"));
     }
 
     function marcarJugado() {
