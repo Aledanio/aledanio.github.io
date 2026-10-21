@@ -14,6 +14,9 @@ cuyo singular está en el vocabulario salen de él, salvo los de significado
 propio (gafas, martes), que van en tools/plurales_propios.txt. Para añadir
 días, amplía la lista DIAS.
 
+Además de los rankings, escribe data/formas.json con las formas flexionadas
+(corriendo, pintaba, grandes) que el juego cuenta como su palabra del vocabulario.
+
 Solo entran palabras que reconoce el diccionario ortográfico de español de
 LibreOffice (proyecto RLA-ES, que sigue la norma de la RAE), guardado en
 tools/diccionario/ con su licencia. Así quedan fuera extranjerismos y erratas.
@@ -292,6 +295,108 @@ def lema_de(w, analisis, conjunto):
     return w
 
 
+# Banderas de sufijos del diccionario que dan formas de la misma palabra: plural y
+# género, y en los verbos conjugaciones, participios e infinitivos y gerundios con un
+# pronombre (correrlo, corriéndose). Se dejan fuera los derivados (-ción, -ito…) y las
+# combinaciones de dos pronombres (dámelo).
+NOMINALES = set("SG")
+VERBALES = set("REIXD" "ÀÁÂñ" "ÄÅÆÈÉÊò")
+
+
+def generar_formas(nlp, vocab, fundidos):
+    """Mapa de forma flexionada → palabra del vocabulario (corriendo → correr, grandes → grande).
+
+    Sale de expandir las entradas del diccionario de LibreOffice. Solo entran las formas
+    cuyo lema está en el vocabulario y que no son ya palabras del vocabulario (pintora va
+    directa). Si una forma sale de varias palabras, gana el plural o el género sobre el
+    verbo (luces → luz, no lucir) y luego la palabra más usada. Las palabras vacías que no
+    son verbos (nada, como, para) no entran: no queremos «nada → nadar».
+    """
+    diccionario = Dictionary.from_files(str(DICCIONARIO))
+    sufijos = diccionario.aff.SFX
+    en_vocab = set(vocab)
+    vacias = nlp.Defaults.stop_words
+
+    def expandir(raiz, banderas):
+        for bandera in banderas:
+            for s in sufijos.get(bandera, []):
+                if raiz.endswith(s.strip) and s.cond_regexp.search(raiz):
+                    yield bandera, raiz[: len(raiz) - len(s.strip)] + s.add
+
+    candidatas = {}  # forma → (es nominal, frecuencia del lema, lema)
+    def proponer(forma, lema, nominal):
+        if forma in en_vocab or forma in PALABROTAS or not SOLO_LETRAS.match(forma):
+            return
+        clave = (nominal, zipf_frequency(lema, "es"), lema)
+        if forma not in candidatas or clave > candidatas[forma]:
+            candidatas[forma] = clave
+
+    for entrada in diccionario.dic.words:
+        raiz, banderas = entrada.stem, entrada.flags
+        formas = list(expandir(raiz, banderas & (NOMINALES | VERBALES)))
+        if not formas:
+            continue
+        # El lema es la propia entrada; si no está, una de sus formas de género (abuelo → abuela).
+        lema = raiz if raiz in en_vocab else next(
+            (f for b, f in formas if b == "G" and f in en_vocab and not f.endswith("s")), None
+        )
+        if not lema:
+            continue
+        if raiz != lema:
+            proponer(raiz, lema, True)
+        for bandera, forma in formas:
+            proponer(forma, lema, bandera in NOMINALES)
+    for plural, singular in fundidos.items():
+        candidatas[plural] = (True, 99, singular)
+
+    # Algunos verbos muy usados (jugar, hacer) tienen sus formas como entradas sueltas, sin
+    # banderas: jugando, juegas, hice. Para esas vale el lema de spaCy si es un verbo del vocabulario.
+    sueltas = sorted(
+        {e.stem for e in diccionario.dic.words if not e.flags & (NOMINALES | VERBALES) and SOLO_LETRAS.match(e.stem)}
+        - en_vocab - candidatas.keys()
+    )
+    for forma, doc in zip(sueltas, nlp.pipe(sueltas, batch_size=2000)):
+        lema = doc[0].lemma_.lower()
+        if len(doc) == 1 and doc[0].pos_ in ("VERB", "AUX") and lema in en_vocab and INFINITIVO.search(lema):
+            proponer(forma, lema, False)
+
+    # Palabras vacías: solo se quedan las que, sueltas, son verbo, sustantivo o adjetivo
+    # (tiene → tener, veces → vez, grandes → grande).
+    dudosas = [f for f in candidatas if f in vacias]
+    for forma, doc in zip(dudosas, nlp.pipe(dudosas, batch_size=2000)):
+        if len(doc) != 1 or doc[0].pos_ not in ("VERB", "AUX", "NOUN", "ADJ"):
+            del candidatas[forma]
+
+    formas = {forma: clave[2] for forma, clave in sorted(candidatas.items())}
+    print(f"Formas flexionadas: {len(formas)}", file=sys.stderr)
+    return formas
+
+
+def compactar_formas(formas):
+    """Formato de data/formas.json: {"paradigmas": [...], "lemas": [...]}.
+
+    Cada forma se escribe respecto a su lema: cuántas letras se quitan del final y qué se
+    añade (con correr, «2iendo» es corriendo; con árbol, «es» es árboles). Los verbos
+    regulares comparten la misma lista, así que cada lista distinta (paradigma) se guarda
+    una vez, y lemas[k] son las palabras, separadas por espacios, que usan paradigmas[k].
+    """
+    def codigo(lema, forma):
+        comun = 0
+        while comun < min(len(lema), len(forma)) and lema[comun] == forma[comun]:
+            comun += 1
+        quitar = len(lema) - comun
+        return (str(quitar) if quitar else "") + forma[comun:]
+
+    por_lema = {}
+    for forma, lema in formas.items():
+        por_lema.setdefault(lema, []).append(codigo(lema, forma))
+    grupos = {}
+    for lema, codigos in por_lema.items():
+        grupos.setdefault(" ".join(sorted(codigos)), []).append(lema)
+    orden = sorted(grupos, key=lambda p: -len(grupos[p]))  # los más usados, primero
+    return {"paradigmas": orden, "lemas": [" ".join(grupos[p]) for p in orden]}
+
+
 def sin_tildes(w):
     return w.translate(str.maketrans("áéíóúü", "aeiouu"))
 
@@ -313,6 +418,11 @@ def main():
     DATOS.mkdir(exist_ok=True)
     (DATOS / "vocabulario.json").write_text(
         json.dumps(vocab, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+    )
+    (DATOS / "formas.json").write_text(
+        json.dumps(compactar_formas(generar_formas(nlp, vocab, fundidos)), ensure_ascii=False,
+                   separators=(",", ":")),
+        encoding="utf-8",
     )
 
     for num, palabra in enumerate(DIAS, start=1):

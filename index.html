@@ -368,7 +368,7 @@
             <span class="t-frio"><i></i>más lejos</span>
           </div>
         </li>
-        <li>Tienes intentos ilimitados. Da igual escribir con tilde o sin ella, y los plurales cuentan como su singular. Si no conozco una palabra, no cuenta como intento.</li>
+        <li>Tienes intentos ilimitados. Da igual escribir con tilde o sin ella, y los plurales, los femeninos y las formas de los verbos cuentan como su palabra (luces → luz, corriendo → correr). Si no conozco una palabra, no cuenta como intento.</li>
         <li>¿Atascado? Toca <b>Pista</b> y te daré una palabra más cercana que la mejor que llevas. Si te rindes (con dos toques), verás la solución.</li>
         <li>Al terminar verás los <b>aledaños</b>: las palabras más cercanas a la secreta.</li>
         <li>En el calendario tienes las partidas de los días anteriores.</li>
@@ -462,7 +462,8 @@
     }
     const guardarEstado = () => guardar(`aledanio:dia:${num}`, estado);
 
-    // Busca una palabra: forma exacta, luego sin tildes, y por último sin plural.
+    // Busca una palabra: forma exacta, luego sin tildes, luego sin plural y, si no está en
+    // el vocabulario, entre las formas flexionadas (corriendo → correr).
     function buscar(texto) {
       const w = texto.trim().toLowerCase();
       const candidatas = [w];
@@ -474,7 +475,32 @@
         const i = sinTildes.get(normalizar(c));
         if (i !== undefined) return i;
       }
-      return -1;
+      descomprimirFormas();
+      return formas.get(w) ?? formasSinTildes.get(normalizar(w)) ?? -1;
+    }
+
+    // data/formas.json guarda cada forma respecto a su palabra: «2iendo» con correr es
+    // corriendo (se quitan 2 letras y se añade «iendo»). Las palabras de lemas[k] usan
+    // todas la lista paradigmas[k]. Se descomprime la primera vez que hace falta.
+    let datosFormas = null;
+    const formas = new Map();
+    const formasSinTildes = new Map();
+    function descomprimirFormas() {
+      if (!datosFormas) return;
+      datosFormas.paradigmas.forEach((paradigma, k) => {
+        const codigos = paradigma.split(" ").map((c) => c.match(/^(\d*)(.*)$/));
+        for (const lema of datosFormas.lemas[k].split(" ")) {
+          const i = exactas.get(lema);
+          if (i === undefined) continue;
+          for (const [, quitar, resto] of codigos) {
+            const forma = lema.slice(0, lema.length - Number(quitar)) + resto;
+            formas.set(forma, i);
+            const clave = normalizar(forma);
+            if (!formasSinTildes.has(clave)) formasSinTildes.set(clave, i);
+          }
+        }
+      });
+      datosFormas = null;
     }
 
     function temperatura(puesto) {
@@ -638,12 +664,15 @@
       if (!texto.trim()) return;
       const i = buscar(texto);
       if (i < 0) { aviso.textContent = "No conozco esa palabra"; return; }
+      // Si cuenta como otra palabra (luces, corriendo), se dice cuál.
+      const escrita = texto.trim().toLowerCase();
+      const como = normalizar(escrita) === normalizar(vocab[i]) ? "" : `${escrita} → ${vocab[i]}`;
       if (estado.intentos.some((t) => t.i === i)) {
-        aviso.textContent = `Ya has probado «${vocab[i]}»`;
+        aviso.textContent = como ? `${como}: ya la has probado` : `Ya has probado «${vocab[i]}»`;
         pintar(i);
         return;
       }
-      aviso.textContent = "";
+      aviso.textContent = como;
       estado.intentos.push({ p: vocab[i], i });
       if (rango[i] === 1) terminar("resuelto");
       marcarJugado();
@@ -735,6 +764,16 @@
       return cargaVocabulario;
     }
 
+    // Las formas flexionadas no son imprescindibles: si fallan, se juega sin ellas y se reintenta luego.
+    let cargaFormas;
+    function cargarFormas() {
+      cargaFormas ??= fetch("data/formas.json").then((r) => {
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      }).then((datos) => { datosFormas = datos; }).catch(() => { cargaFormas = null; });
+      return cargaFormas;
+    }
+
     // Carga la partida del día n (hoy o uno anterior) sin recargar la página.
     // La partida anterior sigue en pantalla, y es la que recibe los intentos, hasta que llegan los datos.
     let diaPedido;
@@ -744,7 +783,9 @@
       let dia = null, error = false;
       if (n >= 1) {
         try {
-          const [, rd] = await Promise.all([cargarVocabulario(), fetch(`data/dia-${String(n).padStart(3, "0")}.json`)]);
+          const [, rd] = await Promise.all([
+            cargarVocabulario(), fetch(`data/dia-${String(n).padStart(3, "0")}.json`), cargarFormas(),
+          ]);
           if (rd.ok) dia = await rd.json();
         } catch {
           error = true;
