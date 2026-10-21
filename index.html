@@ -45,7 +45,7 @@
       --t-caliente: #EF8D52;
       --t-templado: #F6B183;
       --t-frio: #9db8c9;
-      --t-lejos: #fbd9c0; /* quinto tramo del histograma */
+      --t-lejos: #f7c6a1; /* quinto tramo del histograma */
       --texto-claro: #1f1d1a; /* texto sobre los colores claros de la paleta */
       --velo: rgba(31, 29, 26, 0.45);
       color-scheme: light dark;
@@ -240,7 +240,22 @@
     .l-jugado { background: var(--accent); transform: scale(0.6); }
     .l-resuelto { background: var(--t-ardiendo); }
     .l-rendido { background: var(--t-templado); }
-    .cal-racha { margin: 0; font-size: 0.9rem; color: var(--muted); text-align: center; }
+    #calendario { max-height: calc(100dvh - 32px); overflow-y: auto; }
+
+    /* Estadísticas, debajo del calendario */
+    .est { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .est h3 { margin: 0; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+    .est-cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+    /* el número va encima de su etiqueta, aunque en el HTML la etiqueta (dt) vaya antes */
+    .est-cifras div { display: flex; flex-direction: column-reverse; justify-content: flex-end; padding: 8px 4px; border-radius: 10px; background: var(--bg); text-align: center; }
+    .est-cifras dd { margin: 0; font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+    .est-cifras dt { font-size: 0.72rem; color: var(--muted); line-height: 1.25; }
+    .est-texto { margin: 0; font-size: 0.9rem; color: var(--muted); text-align: center; }
+    .est-histo { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 5px 8px; margin: 0; padding: 0; list-style: none; font-size: 0.78rem; }
+    .est-histo li { display: contents; }
+    .est-histo span { color: var(--muted); white-space: nowrap; }
+    .est-histo i { display: block; height: 14px; border-radius: 4px; width: var(--p); min-width: 0; background: var(--t); }
+    .est-histo b { font-variant-numeric: tabular-nums; text-align: right; min-width: 1.5em; }
 
     /* Ventana de ayuda */
     .reglas { width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; }
@@ -319,6 +334,7 @@
     .t-caliente { --t: var(--t-caliente); }
     .t-templado { --t: var(--t-templado); }
     .t-frio { --t: var(--t-frio); }
+    .t-lejos { --t: var(--t-lejos); }
     .final {
       margin-top: 8px;
       padding: 20px 16px;
@@ -428,7 +444,7 @@
       <div class="cal-semana" aria-hidden="true"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
       <div class="cal-rejilla" id="cal-rejilla"></div>
       <div class="cal-leyenda"><span><i class="l-jugado"></i>Empezado</span><span><i class="l-resuelto"></i>Resuelto</span><span><i class="l-rendido"></i>Rendido</span></div>
-      <p class="cal-racha" id="cal-racha"></p>
+      <section class="est" id="cal-estadisticas" aria-labelledby="est-titulo"></section>
       <button type="button" id="cal-cerrar">Cerrar</button>
     </dialog>
 
@@ -737,8 +753,57 @@
         html += `<button class="cal-dia${clases}" type="button" data-dia="${d}" aria-label="${n} de ${nombreMes}, ${desc}"${d === num ? ' aria-current="date"' : ""}>${n}</button>`;
       }
       $("cal-rejilla").innerHTML = html;
-      const r = rachaActual(), mejor = rachaMejor();
-      $("cal-racha").textContent = `Racha: ${dias(r)} · Mejor: ${dias(mejor)}`;
+      pintarEstadisticas();
+    }
+
+    // ---------- estadísticas: salen de las partidas guardadas (aledanio:dia:N) ----------
+    const TRAMOS = [[1, 10, "t-1"], [11, 25, "t-ardiendo"], [26, 50, "t-caliente"], [51, 100, "t-templado"], [101, Infinity, "t-lejos"]];
+    function pintarEstadisticas() {
+      let jugadas = 0;
+      const resueltas = [];
+      for (let d = 1; d <= hoy; d++) {
+        const e = leer(`aledanio:dia:${d}`, null);
+        if (!e?.intentos?.length && !e?.fin) continue;
+        jugadas++;
+        if (e.fin !== "resuelto") continue;
+        const intentos = e.intentos.filter((t) => !t.pista).length;
+        resueltas.push({ d, intentos, pistas: e.intentos.length - intentos });
+      }
+
+      const cifra1 = (n) => n.toLocaleString("es-ES", { maximumFractionDigits: 1 });
+      const casilla = (valor, etiqueta) => `<div><dt>${etiqueta}</dt><dd>${valor}</dd></div>`;
+      const racha = casilla(cifra(rachaActual()), "días de racha") + casilla(cifra(rachaMejor()), "mejor racha");
+      let html = '<h3 id="est-titulo">Tus estadísticas</h3>';
+      if (!jugadas) {
+        $("cal-estadisticas").innerHTML = html + '<p class="est-texto">Aquí verás cómo te va cuando juegues tu primera partida. ¡La de hoy te espera!</p>';
+        return;
+      }
+      if (!resueltas.length) {
+        $("cal-estadisticas").innerHTML = html + `<dl class="est-cifras">${casilla(cifra(jugadas), jugadas === 1 ? "jugada" : "jugadas")}${racha}</dl>` +
+          '<p class="est-texto">Cuando resuelvas una partida verás aquí tu media y tu mejor marca. ¡Tú puedes!</p>';
+        return;
+      }
+
+      // La mejor: menos intentos; a igualdad, sin pistas; y, si no, la primera.
+      const mejor = [...resueltas].sort((a, b) => (a.pistas > 0) - (b.pistas > 0) || a.intentos - b.intentos || a.d - b.d)[0];
+      const media = resueltas.reduce((s, x) => s + x.intentos, 0) / resueltas.length;
+      const porcentaje = Math.round((100 * resueltas.length) / jugadas);
+      html += '<dl class="est-cifras">' +
+        casilla(cifra(jugadas), jugadas === 1 ? "jugada" : "jugadas") +
+        casilla(cifra(resueltas.length), `${resueltas.length === 1 ? "resuelta" : "resueltas"} (${porcentaje} %)`) +
+        casilla(cifra1(media), "intentos de media") +
+        racha +
+        casilla(cifra(mejor.intentos), `mejor partida (nº ${mejor.d}` + (mejor.pistas ? `, ${mejor.pistas} ${mejor.pistas === 1 ? "pista" : "pistas"}` : "") + ")") +
+        "</dl>";
+
+      // Histograma de intentos de las resueltas, por tramos.
+      const cuentas = TRAMOS.map(([de, a]) => resueltas.filter((x) => x.intentos >= de && x.intentos <= a).length);
+      const maximo = Math.max(...cuentas);
+      html += '<ol class="est-histo" aria-label="Intentos en las partidas resueltas">' + TRAMOS.map(([de, a, t], k) =>
+        `<li><span>${a === Infinity ? `más de ${de - 1}` : `${de}–${a}`}</span>` +
+        `<i class="${t}" style="--p:${((100 * cuentas[k]) / maximo).toFixed(1)}%"></i><b>${cuentas[k]}</b></li>`
+      ).join("") + "</ol>";
+      $("cal-estadisticas").innerHTML = html;
     }
 
     function abrirCalendario() {
