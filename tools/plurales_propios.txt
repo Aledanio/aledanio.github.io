@@ -1,0 +1,37 @@
+# Plurales con significado propio: no se funden con su singular ni salen del vocabulario
+# (gafas ≠ gafa, martes ≠ marte). Una por línea; las líneas que empiezan por # se ignoran.
+# Después de editar, vuelve a ejecutar tools/generar_rankings.py.
+
+# Objetos que se nombran en plural
+gafas
+tijeras
+pinzas
+alicates
+prismáticos
+esposas
+
+# Días de la semana
+lunes
+martes
+miércoles
+jueves
+viernes
+
+# Invariables en -s
+tesis
+crisis
+análisis
+
+# Otros
+afueras
+alrededores
+cosquillas
+finanzas
+celos
+modales
+honorarios
+víveres
+vacaciones
+ganas
+matemáticas
+nupcias

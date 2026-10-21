@@ -764,10 +764,15 @@
       orden.forEach((i, puesto) => { rango[i] = puesto + 1; });
 
       // Se guardan las palabras, no los índices, por si el vocabulario se regenera.
+      // Una palabra que ya no está (un plural como «dioses») pasa a la que la reconoce («dios»).
       estado = leer(`aledanio:dia:${n}`, { intentos: [], fin: null });
+      const vistos = new Set();
       estado.intentos = estado.intentos
-        .map((t) => ({ ...t, i: exactas.get(t.p) }))
-        .filter((t) => t.i !== undefined);
+        .map((t) => {
+          const i = exactas.get(t.p) ?? buscar(t.p);
+          return i >= 0 ? { ...t, p: vocab[i], i } : null;
+        })
+        .filter((t) => t && !vistos.has(t.i) && vistos.add(t.i));
 
       // Todo limpio para el día nuevo.
       clearTimeout(rendirseTemporizador);

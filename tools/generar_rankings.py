@@ -9,7 +9,9 @@ Uso (desde la raíz del repositorio):
 
 Para vetar palabras, añádelas a tools/excluir.txt (una por línea) y vuelve a
 ejecutar el script. Para rescatar palabras comunes que el script toma por
-nombres propios (el Ayuntamiento), añádelas a tools/incluir.txt. Para añadir
+nombres propios (el Ayuntamiento), añádelas a tools/incluir.txt. Los plurales
+cuyo singular está en el vocabulario salen de él, salvo los de significado
+propio (gafas, martes), que van en tools/plurales_propios.txt. Para añadir
 días, amplía la lista DIAS.
 
 Solo entran palabras que reconoce el diccionario ortográfico de español de
@@ -35,6 +37,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 DATOS = RAIZ / "data"
 EXCLUIR = Path(__file__).resolve().parent / "excluir.txt"
 INCLUIR = Path(__file__).resolve().parent / "incluir.txt"
+PLURALES_PROPIOS = Path(__file__).resolve().parent / "plurales_propios.txt"
 DICCIONARIO = Path(__file__).resolve().parent / "diccionario" / "es"
 
 INICIO = date(2026, 10, 11)
@@ -73,12 +76,6 @@ CONSERVAR = {
     "último", "mayor", "mejor", "peor", "conocer", "conseguir", "dar", "decir", "hacer",
     "llevar", "poner", "realizar", "saber", "tener", "usar", "ver",
 }
-# Palabras que se usan en plural y no deben fundirse con su singular (martes ≠ marte).
-PLURALES = {
-    "lunes", "martes", "miércoles", "jueves", "viernes", "gafas", "vacaciones", "tijeras",
-    "afueras", "ganas", "celos", "víveres", "modales", "alrededores", "prismáticos", "pinzas",
-    "alicates", "esposas", "finanzas", "matemáticas", "cosquillas", "honorarios", "nupcias",
-}
 INFINITIVO = re.compile(r"(?:ar|er|ir|ír)$")
 # Terminaciones de palabras derivadas de un verbo que son sustantivos o adjetivos.
 DERIVADA = re.compile(
@@ -109,11 +106,22 @@ def leer_lista(ruta):
     return {l.strip().lower() for l in lineas if l.strip() and not l.startswith("#")}
 
 
+# Palabras que se usan en plural y no deben fundirse con su singular (martes ≠ marte).
+PLURALES = leer_lista(PLURALES_PROPIOS)
+# Plurales que cambian la tilde de sitio.
+PLURALES_IRREGULARES = {"régimen": "regímenes", "carácter": "caracteres", "espécimen": "especímenes"}
+
+
 def construir_vocabulario(nlp, excluidas, incluidas):
     diccionario = Dictionary.from_files(str(DICCIONARIO))
     candidatas = [
         w for w in top_n_list("es", N_FRECUENTES)
         if SOLO_LETRAS.match(w) and not RISA.match(w) and w not in excluidas and w not in PALABROTAS
+    ]
+    # Con una palabra se veta también su plural (hable y hables, ble y bles).
+    candidatas = [
+        w for w in candidatas
+        if w in PLURALES or not (w.endswith("s") and (w[:-1] in excluidas or w.endswith("es") and w[:-2] in excluidas))
     ]
     candidatas += [w for w in incluidas if w not in set(candidatas)]
     candidatas = [w for w in candidatas if nlp.vocab.has_vector(w)]
@@ -181,7 +189,44 @@ def construir_vocabulario(nlp, excluidas, incluidas):
         if palabra not in vocab:
             print(f"Añadiendo palabra del día que faltaba: {palabra}", file=sys.stderr)
             vocab.append(palabra)
-    return vocab
+
+    # Los plurales cuentan como su singular: fuera los que aún conviven con él (dioses y dios).
+    conjunto = set(vocab)
+    por_clave = {}
+    for w in vocab:
+        por_clave.setdefault(sin_tildes(w), []).append(w)
+    fundidos = {}
+    for w in vocab:
+        singular = None if w in PLURALES else singular_de(w, conjunto, por_clave)
+        if singular:
+            fundidos[w] = singular
+    print(f"Plurales que salen del vocabulario ({len(fundidos)}):\n  "
+          + ", ".join(f"{p} → {s}" for p, s in fundidos.items()), file=sys.stderr)
+    return [w for w in vocab if w not in fundidos], fundidos
+
+
+def singular_de(w, conjunto, por_clave):
+    """Singular de w si es un plural (-s, -es, -ces) y el singular está en el vocabulario.
+
+    La tilde solo puede cambiar como en los plurales de verdad: la pierde la última sílaba
+    (camión → camiones), la gana la antepenúltima (joven → jóvenes) o se mueve en unos
+    pocos irregulares (régimen → regímenes). Así inglés no pasa por plural de ingle, ni
+    mamas de mamá.
+    """
+    if w.endswith("ces") and w[:-3] + "z" in conjunto:
+        return w[:-3] + "z"  # luces → luz
+    for corte in (2, 1):  # árboles → árbol, casas → casa
+        if w.endswith("es"[-corte:]) and w[:-corte] in conjunto:
+            return w[:-corte]
+    if w.endswith("es"):
+        for c in por_clave.get(sin_tildes(w[:-2]), []):
+            if PLURALES_IRREGULARES.get(c) == w:
+                return c
+            if not re.search("[áéíóú]", c) and len(re.findall("[áéíóú]", w)) == 1:
+                return c  # jóvenes, órdenes
+            if re.search("[áéíóú][ns]$", c) and not re.search("[áéíóú]", w):
+                return c  # marrones
+    return None
 
 
 def es_forma_verbal(diccionario, w, datos, nominal):
@@ -255,7 +300,7 @@ def main():
     nlp = spacy.load("es_core_news_lg", exclude=["parser", "ner"])
     excluidas = leer_lista(EXCLUIR) - set(DIAS)
     incluidas = leer_lista(INCLUIR) - excluidas
-    vocab = construir_vocabulario(nlp, excluidas, incluidas)
+    vocab, fundidos = construir_vocabulario(nlp, excluidas, incluidas)
     print(f"Vocabulario final: {len(vocab)} palabras", file=sys.stderr)
 
     matriz = np.array([nlp.vocab.get_vector(w) for w in vocab], dtype=np.float32)
