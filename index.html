@@ -291,6 +291,8 @@
     .final .solucion { margin: 0; font-size: 2rem; font-weight: 700; color: var(--accent); }
     .final .datos { margin: 8px 0 16px; color: var(--muted); }
     .final .copiado { margin: 8px 0 0; min-height: 1.4em; color: var(--muted); font-size: 0.9rem; }
+    .final .proxima { margin: 4px 0 0; padding-top: 14px; border-top: 1px solid var(--line); font-weight: 600; font-variant-numeric: tabular-nums; }
+    #final-hoy { margin-top: 4px; }
     .mas { display: block; margin: 12px auto 0; }
     .mensaje { text-align: center; color: var(--muted); font-size: 1.1rem; margin-top: 48px; }
 
@@ -399,6 +401,8 @@
         <p class="datos" id="final-datos"></p>
         <button id="compartir">Compartir</button>
         <p class="copiado" id="copiado" role="status" aria-live="polite"></p>
+        <p class="proxima" id="proxima" hidden></p>
+        <button type="button" class="secundario" id="final-hoy" hidden>Volver a hoy</button>
       </section>
 
       <div id="controles">
@@ -560,6 +564,55 @@
       );
       $("ver-mas").hidden = cuantas === 100;
       $("aledanos").hidden = false;
+      pintarProxima();
+    }
+
+    // ---------- cuenta atrás hasta la palabra de mañana ----------
+    // Solo en la partida de hoy. En un día anterior se ofrece volver a hoy.
+    let proximaTemporizador;
+    function pintarProxima() {
+      clearTimeout(proximaTemporizador);
+      const boton = $("final-hoy");
+      if (num !== hoy) {
+        $("proxima").hidden = true;
+        boton.hidden = false;
+        boton.textContent = "Volver a hoy";
+        boton.className = "secundario";
+        return;
+      }
+      const falta = medianocheMadrid() - Date.now();
+      if (falta <= 0) {
+        $("proxima").hidden = true;
+        boton.hidden = false;
+        boton.textContent = "Jugar la de hoy";
+        boton.className = "";
+        return;
+      }
+      const minutos = Math.ceil(falta / 60000);
+      const h = Math.floor(minutos / 60), m = minutos % 60;
+      $("proxima").textContent = `Nueva palabra en ${h ? `${h} h ` : ""}${m} min`;
+      $("proxima").hidden = false;
+      boton.hidden = true;
+      // Se repinta justo al cambiar de minuto (o al llegar la medianoche).
+      proximaTemporizador = setTimeout(pintarProxima, falta % 60000 || 60000);
+    }
+
+    // Instante en que empieza en Madrid el día siguiente a hoy. La medianoche nunca cae en
+    // un cambio de hora (son a las 2 o las 3), así que basta el desfase de ese instante.
+    function medianocheMadrid() {
+      const manana = INICIO + hoy * 86400000; // las 00:00 UTC del día siguiente
+      const desfase = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Madrid", timeZoneName: "shortOffset" })
+        .formatToParts(new Date(manana)).find((p) => p.type === "timeZoneName").value; // «GMT+2»
+      const [, signo, horas, minutos = 0] = desfase.match(/([+-])(\d+)(?::(\d+))?/) ?? [, "+", 0];
+      return manana - (signo === "-" ? -1 : 1) * (horas * 60 + Number(minutos)) * 60000;
+    }
+
+    // Al cambiar de día con la página abierta, hoy pasa a ser el nuevo día.
+    function irAHoy() {
+      hoy = hoyEnMadrid();
+      pintarRacha();
+      cargarDia(hoy);
+      scrollTo(0, 0);
     }
 
     // ---------- racha: días seguidos jugando la partida de su día ----------
@@ -818,6 +871,7 @@
 
       // Todo limpio para el día nuevo.
       clearTimeout(rendirseTemporizador);
+      clearTimeout(proximaTemporizador);
       $("rendirse").classList.remove("confirmar");
       $("rendirse").textContent = "Rendirse";
       $("entrada").value = "";
@@ -870,7 +924,8 @@
         if (d !== num) cargarDia(d);
         scrollTo(0, 0);
       });
-      $("volver-hoy").addEventListener("click", () => cargarDia(hoy));
+      $("volver-hoy").addEventListener("click", irAHoy);
+      $("final-hoy").addEventListener("click", irAHoy);
       $("ayuda").addEventListener("click", abrirReglas);
       $("reglas-cerrar").addEventListener("click", () => $("reglas").close());
       $("reglas").addEventListener("click", (e) => { if (e.target === $("reglas") && fueraDe($("reglas"), e)) $("reglas").close(); });
