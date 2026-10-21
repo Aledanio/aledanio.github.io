@@ -29,6 +29,15 @@
   <link rel="alternate icon" href="icons/favicon.ico">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <meta name="theme-color" content="#E0672C">
+  <script>
+    // Modo oscuro elegido en la ayuda: se aplica antes de pintar para que la página no parpadee en claro.
+    try {
+      if (JSON.parse(localStorage.getItem("aledanio:tema")) === "oscuro") {
+        document.documentElement.dataset.tema = "oscuro";
+        document.querySelector('meta[name="theme-color"]').content = "#1c1814";
+      }
+    } catch {}
+  </script>
   <meta name="apple-mobile-web-app-title" content="Aledaño">
   <style>
     :root {
@@ -49,8 +58,8 @@
       --velo: rgba(31, 29, 26, 0.45);
       color-scheme: light;
     }
-    /* Tema oscuro, de momento sin usar: por defecto la app va siempre en claro. Se activaría
-       con <html data-tema="oscuro">. Fondo pardo cálido, tarjetas algo más claras, y los
+    /* Tema oscuro, que se elige en la ayuda (por defecto, claro). Va en <html data-tema="oscuro">.
+       Fondo pardo cálido, tarjetas algo más claras, y los
        colores de temperatura ajustados para que se distingan sobre él. */
     :root[data-tema="oscuro"] {
       --bg: #1c1814;
@@ -261,6 +270,34 @@
     .reglas h2 { margin: 0; font-size: 1.2rem; letter-spacing: 0; text-transform: none; color: var(--fg); }
     .reglas ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 0.92rem; }
     .reglas b { white-space: nowrap; }
+    /* Interruptor del modo oscuro, en la ayuda */
+    .tema { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 0.92rem; }
+    .interruptor {
+      position: relative;
+      flex: none;
+      width: 48px;
+      height: 28px;
+      padding: 0;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--track);
+    }
+    .interruptor::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--card);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      transition: transform 0.15s;
+    }
+    .interruptor[aria-checked="true"] { background: var(--t-ardiendo); border-color: var(--t-ardiendo); }
+    .interruptor[aria-checked="true"]::after { transform: translateX(20px); background: #fff; }
+    .interruptor:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) { .interruptor::after { transition: none; } }
     .escala { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-size: 0.82rem; color: var(--muted); }
     .escala span { display: inline-flex; align-items: center; gap: 5px; }
     .escala i { display: inline-block; width: 18px; height: 8px; border-radius: 4px; background: var(--t); }
@@ -431,6 +468,10 @@
         <li>En el calendario tienes las partidas de los días anteriores.</li>
         <li>La llama cuenta los días seguidos que juegas la partida del día, aciertes o no. ¡Cuida tu racha!</li>
       </ul>
+      <div class="tema">
+        <span id="tema-etiqueta">Modo oscuro</span>
+        <button type="button" class="interruptor" id="tema" role="switch" aria-checked="false" aria-labelledby="tema-etiqueta"></button>
+      </div>
       <button type="button" id="reglas-cerrar">¡A jugar!</button>
     </dialog>
 
@@ -1035,6 +1076,12 @@
       $("final-hoy").addEventListener("click", irAHoy);
       $("ayuda").addEventListener("click", abrirReglas);
       $("reglas-cerrar").addEventListener("click", () => $("reglas").close());
+      ponerTema(leer("aledanio:tema", "claro") === "oscuro");
+      $("tema").addEventListener("click", () => {
+        const oscuro = $("tema").getAttribute("aria-checked") !== "true";
+        ponerTema(oscuro);
+        guardar("aledanio:tema", oscuro ? "oscuro" : "claro");
+      });
       $("reglas").addEventListener("click", (e) => { if (e.target === $("reglas") && fueraDe($("reglas"), e)) $("reglas").close(); });
 
       $("formulario").addEventListener("submit", (e) => {
@@ -1056,6 +1103,14 @@
     function fueraDe(ventana, e) {
       const r = ventana.getBoundingClientRect();
       return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+    }
+
+    // Modo oscuro: se cambia con el interruptor de la ayuda y se recuerda en este navegador.
+    function ponerTema(oscuro) {
+      if (oscuro) document.documentElement.dataset.tema = "oscuro";
+      else delete document.documentElement.dataset.tema;
+      document.querySelector('meta[name="theme-color"]').content = oscuro ? "#1c1814" : "#E0672C";
+      $("tema").setAttribute("aria-checked", String(oscuro));
     }
 
     function abrirReglas() {
