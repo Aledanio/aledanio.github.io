@@ -28,8 +28,7 @@
   <link rel="icon" href="icons/favicon-16.png" sizes="16x16" type="image/png">
   <link rel="alternate icon" href="icons/favicon.ico">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <meta name="theme-color" content="#E0672C" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#1c1814" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#E0672C">
   <meta name="apple-mobile-web-app-title" content="Aledaño">
   <style>
     :root {
@@ -48,27 +47,27 @@
       --t-lejos: #f7c6a1; /* quinto tramo del histograma */
       --texto-claro: #1f1d1a; /* texto sobre los colores claros de la paleta */
       --velo: rgba(31, 29, 26, 0.45);
-      color-scheme: light dark;
+      color-scheme: light;
     }
-    /* Tema oscuro: sigue la preferencia del sistema. Fondo pardo cálido, tarjetas algo más
-       claras, y los colores de temperatura ajustados para que se distingan sobre él. */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #1c1814;
-        --fg: #f1ebe3;
-        --muted: #a99f93;
-        --accent: #f08a5a;
-        --card: #28221d;
-        --line: #3b332c;
-        --track: #3a322b;
-        --t-1: #ff5a3d;
-        --t-ardiendo: #E0672C;
-        --t-caliente: #EF8D52;
-        --t-templado: #F6B183;
-        --t-frio: #6f93a8;
-        --t-lejos: #a87458;
-        --velo: rgba(0, 0, 0, 0.6);
-      }
+    /* Tema oscuro, de momento sin usar: por defecto la app va siempre en claro. Se activaría
+       con <html data-tema="oscuro">. Fondo pardo cálido, tarjetas algo más claras, y los
+       colores de temperatura ajustados para que se distingan sobre él. */
+    :root[data-tema="oscuro"] {
+      --bg: #1c1814;
+      --fg: #f1ebe3;
+      --muted: #a99f93;
+      --accent: #f08a5a;
+      --card: #28221d;
+      --line: #3b332c;
+      --track: #3a322b;
+      --t-1: #ff5a3d;
+      --t-ardiendo: #E0672C;
+      --t-caliente: #EF8D52;
+      --t-templado: #F6B183;
+      --t-frio: #6f93a8;
+      --t-lejos: #a87458;
+      --velo: rgba(0, 0, 0, 0.6);
+      color-scheme: dark;
     }
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
