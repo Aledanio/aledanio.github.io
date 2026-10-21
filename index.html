@@ -462,7 +462,7 @@
             <span class="t-frio"><i></i>más lejos</span>
           </div>
         </li>
-        <li>Tienes intentos ilimitados. Da igual escribir con tilde o sin ella, y los plurales, los femeninos y las formas de los verbos cuentan como su palabra (luces → luz, corriendo → correr). Si no conozco una palabra, no cuenta como intento.</li>
+        <li>Tienes intentos ilimitados. Da igual escribir con tilde o sin ella, y los plurales, los femeninos y las formas de los verbos cuentan como su palabra (luces → luz, corriendo → correr). Si no conozco una palabra, o es de las muy comunes (el, de, que), no cuenta como intento.</li>
         <li>¿Atascado? Toca <b>Pista</b> y te daré una palabra más cercana que la mejor que llevas. Si te rindes (con dos toques), verás la solución.</li>
         <li>Al terminar verás los <b>aledaños</b>: las palabras más cercanas a la secreta.</li>
         <li>En el calendario tienes las partidas de los días anteriores.</li>
@@ -601,6 +601,17 @@
         }
       });
       datosFormas = null;
+    }
+
+    // Palabras gramaticales (el, de, que, yo): no son del juego, pero se reconocen para
+    // decir que son demasiado comunes. Se comparan sin tildes (él, aqui), salvo que la
+    // palabra con su tilde sea del vocabulario o una forma (té, sé, está).
+    const comunes = new Set();
+    function esComun(texto) {
+      const w = texto.trim().toLowerCase();
+      if (exactas.has(w)) return false;
+      descomprimirFormas();
+      return !formas.has(w) && comunes.has(normalizar(w));
     }
 
     function temperatura(puesto) {
@@ -863,6 +874,7 @@
     function probar(texto) {
       const aviso = $("aviso");
       if (!texto.trim()) return;
+      if (esComun(texto)) { aviso.textContent = "Esa palabra es demasiado común para el juego"; return; }
       const i = buscar(texto);
       if (i < 0) { aviso.textContent = "No conozco esa palabra"; return; }
       // Si cuenta como otra palabra (luces, corriendo), se dice cuál.
@@ -975,6 +987,16 @@
       return cargaFormas;
     }
 
+    // Como las formas, las palabras comunes no son imprescindibles.
+    let cargaComunes;
+    function cargarComunes() {
+      cargaComunes ??= fetch("data/comunes.json").then((r) => {
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      }).then((lista) => { lista.forEach((w) => comunes.add(normalizar(w))); }).catch(() => { cargaComunes = null; });
+      return cargaComunes;
+    }
+
     // Carga la partida del día n (hoy o uno anterior) sin recargar la página.
     // La partida anterior sigue en pantalla, y es la que recibe los intentos, hasta que llegan los datos.
     let diaPedido;
@@ -985,7 +1007,7 @@
       if (n >= 1) {
         try {
           const [, rd] = await Promise.all([
-            cargarVocabulario(), fetch(`data/dia-${String(n).padStart(3, "0")}.json`), cargarFormas(),
+            cargarVocabulario(), fetch(`data/dia-${String(n).padStart(3, "0")}.json`), cargarFormas(), cargarComunes(),
           ]);
           if (rd.ok) dia = await rd.json();
         } catch {

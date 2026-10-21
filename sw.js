@@ -11,6 +11,7 @@ const BASICOS = [
   "manifest.webmanifest",
   "data/vocabulario.json",
   "data/formas.json",
+  "data/comunes.json",
   "icons/favicon.svg",
   "icons/favicon-32.png",
   "icons/favicon-16.png",

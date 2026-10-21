@@ -15,7 +15,9 @@ propio (gafas, martes), que van en tools/plurales_propios.txt. Para añadir
 días, amplía la lista DIAS.
 
 Además de los rankings, escribe data/formas.json con las formas flexionadas
-(corriendo, pintaba, grandes) que el juego cuenta como su palabra del vocabulario.
+(corriendo, pintaba, grandes) que el juego cuenta como su palabra del vocabulario, y
+data/comunes.json con las palabras gramaticales (el, de, que, yo, muy), que el juego
+rechaza sin contarlas como intento.
 
 Solo entran palabras que reconoce el diccionario ortográfico de español de
 LibreOffice (proyecto RLA-ES, que sigue la norma de la RAE), guardado en
@@ -68,6 +70,9 @@ DIAS = [
 N_FRECUENTES = 150000
 PENALIZACION_RARAS = 0.05
 SOLO_LETRAS = re.compile(r"^[a-záéíóúüñ]{3,}$")
+# Las formas pueden tener dos letras (va, ha, sé); las que coinciden con una palabra
+# común (de, se, te) se quitan después.
+LETRAS_FORMA = re.compile(r"^[a-záéíóúüñ]{2,}$")
 # Risas escritas (jaja, jajajaja, jejeje…): no son palabras del juego.
 RISA = re.compile(r"^(?:(?:ja){2,}|(?:je){2,}|(?:ji){2,}|(?:jo){2,})j?$")
 CATEGORIAS = {"NOUN", "VERB", "ADJ", "ADV"}
@@ -302,15 +307,73 @@ def lema_de(w, analisis, conjunto):
 NOMINALES = set("SG")
 VERBALES = set("REIXD" "ÀÁÂñ" "ÄÅÆÈÉÊò")
 
+# Formas de los verbos más irregulares, escritas a mano porque el diccionario y spaCy no
+# las dan todas o las reparten mal (somos → soma, podemos → podar). Mandan sobre
+# cualquier otra lectura. Las que son de dos verbos se dan a uno: fui, fue y fuera, de
+# ser e ir, van a ser; sé, de saber y ser, a saber; ve, de ir y ver, a ver.
+FORMAS_FIJAS = {
+    "ser": "soy eres es somos sois son era eras éramos erais eran fui fuiste fue fuimos "
+           "fuisteis fueron sea seas seamos seáis sean fuera fueras fuéramos fuerais fueran "
+           "fuese fueses fuésemos fueseis fuesen seré serás será seremos seréis serán sería "
+           "serías seríamos seríais serían sido siendo sed",
+    "estar": "estoy estás está estamos estáis están estaba estabas estábamos estabais estaban "
+             "estuve estuviste estuvo estuvimos estuvisteis estuvieron esté estés estemos estéis "
+             "estén estuviera estuvieras estuviéramos estuvierais estuvieran estuviese "
+             "estuviésemos estuviesen estaré estarás estará estaremos estaréis estarán estaría "
+             "estarías estaríamos estaríais estarían estado estando estate",
+    "ir": "voy vas va vamos vais van iba ibas íbamos ibais iban fuiste vaya vayas vayamos "
+          "vayáis vayan iré irás irá iremos iréis irán iría irías iríamos iríais irían ido "
+          "yendo id vete irse",
+    "haber": "he has ha hay hemos habéis han había habías habíamos habíais habían hube "
+             "hubiste hubo hubimos hubisteis hubieron haya hayas hayamos hayáis hayan hubiera "
+             "hubieras hubiéramos hubierais hubieran hubiese hubiésemos hubiesen habré habrás "
+             "habrá habremos habréis habrán habría habrías habríamos habríais habrían habido "
+             "habiendo",
+    "poder": "puedo puedes puede podemos podéis pueden podía podías podíamos podíais podían "
+             "pude pudiste pudo pudimos pudisteis pudieron pueda puedas podamos podáis puedan "
+             "pudiera pudieras pudiéramos pudierais pudieran pudiese pudiésemos pudiesen podré "
+             "podrás podrá podremos podréis podrán podría podrías podríamos podríais podrían "
+             "podido pudiendo",
+    "querer": "quiero quieres quiere queremos queréis quieren quería querías queríamos "
+              "queríais querían quise quisiste quiso quisimos quisisteis quisieron quiera "
+              "quieras queramos queráis quieran quisiera quisieras quisiéramos quisierais "
+              "quisieran quisiese quisiésemos quisiesen querré querrás querrá querremos "
+              "querréis querrán querría querrías querríamos querríais querrían querido queriendo",
+    "saber": "sé sabes sabe sabemos sabéis saben sabía sabías sabíamos sabíais sabían supe "
+             "supiste supo supimos supisteis supieron sepa sepas sepamos sepáis sepan supiera "
+             "supieras supiéramos supierais supieran supiese supiésemos supiesen sabré sabrás "
+             "sabrá sabremos sabréis sabrán sabría sabrías sabríamos sabríais sabrían sabido "
+             "sabiendo",
+    "creer": "creo",  # no crear
+    "ver": "ve",
+    "dar": "da di",
+    # Apócopes: gran casa, buen día, primer piso.
+    "grande": "gran",
+    "bueno": "buen",
+    "primero": "primer",
+    "tercero": "tercer",
+}
+
+# Palabras gramaticales que no están entre las palabras vacías de spaCy.
+COMUNES_EXTRA = set(
+    "cuyo cuya cuyos cuyas sendos sendas acá allá cuán cuan conque versus ah eh oh uy ay "
+    "aquel aquella aquellos aquellas aquello vuestras sendas cuántas"
+    .split()
+)
+
 
 def generar_formas(nlp, vocab, fundidos):
-    """Mapa de forma flexionada → palabra del vocabulario (corriendo → correr, grandes → grande).
+    """Formas flexionadas y palabras comunes.
+
+    Devuelve el mapa de forma flexionada → palabra del vocabulario (corriendo → correr,
+    grandes → grande) y la lista de palabras comunes (el, de, que).
 
     Sale de expandir las entradas del diccionario de LibreOffice. Solo entran las formas
     cuyo lema está en el vocabulario y que no son ya palabras del vocabulario (pintora va
     directa). Si una forma sale de varias palabras, gana el plural o el género sobre el
     verbo (luces → luz, no lucir) y luego la palabra más usada. Las palabras vacías que no
-    son verbos (nada, como, para) no entran: no queremos «nada → nadar».
+    son verbos (nada, como, para) no entran: no queremos «nada → nadar». Esas son las
+    palabras comunes, junto con las demás palabras vacías que no son del vocabulario.
     """
     diccionario = Dictionary.from_files(str(DICCIONARIO))
     sufijos = diccionario.aff.SFX
@@ -325,7 +388,7 @@ def generar_formas(nlp, vocab, fundidos):
 
     candidatas = {}  # forma → (es nominal, frecuencia del lema, lema)
     def proponer(forma, lema, nominal):
-        if forma in en_vocab or forma in PALABROTAS or not SOLO_LETRAS.match(forma):
+        if forma in en_vocab or forma in PALABROTAS or not LETRAS_FORMA.match(forma):
             return
         clave = (nominal, zipf_frequency(lema, "es"), lema)
         if forma not in candidatas or clave > candidatas[forma]:
@@ -360,16 +423,35 @@ def generar_formas(nlp, vocab, fundidos):
         if len(doc) == 1 and doc[0].pos_ in ("VERB", "AUX") and lema in en_vocab and INFINITIVO.search(lema):
             proponer(forma, lema, False)
 
-    # Palabras vacías: solo se quedan las que, sueltas, son verbo, sustantivo o adjetivo
-    # (tiene → tener, veces → vez, grandes → grande).
-    dudosas = [f for f in candidatas if f in vacias]
+    # Palabras vacías que salen de un verbo: solo se quedan las que, sueltas, son verbo,
+    # sustantivo o adjetivo (tiene → tener, sí; nada → nadar, no). Las de plural y género
+    # se quedan todas (veces → vez, cierta → cierto).
+    dudosas = [f for f in candidatas if f in vacias and not candidatas[f][0]]
     for forma, doc in zip(dudosas, nlp.pipe(dudosas, batch_size=2000)):
         if len(doc) != 1 or doc[0].pos_ not in ("VERB", "AUX", "NOUN", "ADJ"):
             del candidatas[forma]
 
+    for lema, lista in FORMAS_FIJAS.items():
+        if lema in en_vocab:
+            for forma in lista.split():
+                if forma not in en_vocab:
+                    candidatas[forma] = (True, 100, lema)
+
     formas = {forma: clave[2] for forma, clave in sorted(candidatas.items())}
     print(f"Formas flexionadas: {len(formas)}", file=sys.stderr)
-    return formas
+
+    # Comunes: las palabras vacías que no son del vocabulario ni una forma suya. Las que
+    # sin tilde son una palabra del vocabulario (sólo y solo) se quedan fuera: cuentan como ella.
+    # Tampoco entran las formas verbales escritas sin tilde (sera, eramos).
+    planas = {w for w in vocab if w == sin_tildes(w)}
+    candidatas = sorted(
+        w for w in vacias | COMUNES_EXTRA
+        if w not in en_vocab and w not in formas and sin_tildes(w) not in planas
+        and (w in COMUNES_EXTRA or diccionario.lookup(w))
+    )
+    comunes = [w for w, doc in zip(candidatas, nlp.pipe(candidatas)) if w in COMUNES_EXTRA or doc[0].pos_ not in ("VERB", "AUX")]
+    print(f"Palabras comunes: {len(comunes)}", file=sys.stderr)
+    return formas, comunes
 
 
 def compactar_formas(formas):
@@ -419,10 +501,13 @@ def main():
     (DATOS / "vocabulario.json").write_text(
         json.dumps(vocab, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
     )
+    formas, comunes = generar_formas(nlp, vocab, fundidos)
     (DATOS / "formas.json").write_text(
-        json.dumps(compactar_formas(generar_formas(nlp, vocab, fundidos)), ensure_ascii=False,
-                   separators=(",", ":")),
+        json.dumps(compactar_formas(formas), ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",
+    )
+    (DATOS / "comunes.json").write_text(
+        json.dumps(comunes, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
     )
 
     for num, palabra in enumerate(DIAS, start=1):
