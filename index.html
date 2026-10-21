@@ -340,6 +340,19 @@
     }
     button.confirmar { border-color: var(--t-1); color: var(--t-1); }
     .aviso { min-height: 1.4em; margin: 8px 2px 0; color: var(--muted); font-size: 0.95rem; }
+    .aviso b { color: var(--fg); }
+    /* Sugerencia de «¿Querías decir…?»: un botón con aspecto de palabra subrayada */
+    button.sugerencia {
+      padding: 0 2px;
+      border-radius: 4px;
+      background: none;
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: underline;
+      text-underline-offset: 0.18em;
+    }
+    button.sugerencia:hover { color: var(--fg); }
+    button.sugerencia:focus-visible { outline: 2px solid var(--fg); outline-offset: 1px; }
     .acciones {
       display: flex;
       align-items: center;
@@ -382,6 +395,10 @@
     .final h2 { margin-top: 0; }
     .final .solucion { margin: 0; font-size: 2rem; font-weight: 700; color: var(--accent); }
     .final .datos { margin: 8px 0 16px; color: var(--muted); }
+    /* Curiosidad de la palabra, bajo la solución */
+    .curiosidad { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); text-align: left; }
+    .curiosidad h3 { margin: 0 0 4px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+    .curiosidad p { margin: 0; font-size: 0.92rem; line-height: 1.45; }
     .final .copiado { margin: 8px 0 0; min-height: 1.4em; color: var(--muted); font-size: 0.9rem; }
     .final .proxima { margin: 4px 0 0; padding-top: 14px; border-top: 1px solid var(--line); font-weight: 600; font-variant-numeric: tabular-nums; }
     #final-hoy { margin-top: 4px; }
@@ -495,6 +512,10 @@
         <h2 id="final-titulo"></h2>
         <p class="solucion" id="solucion"></p>
         <p class="datos" id="final-datos"></p>
+        <aside class="curiosidad" id="curiosidad" aria-labelledby="curiosidad-titulo" hidden>
+          <h3 id="curiosidad-titulo">¿Sabías que…?</h3>
+          <p id="curiosidad-texto"></p>
+        </aside>
         <button id="compartir">Compartir</button>
         <p class="copiado" id="copiado" role="status" aria-live="polite"></p>
         <p class="proxima" id="proxima" hidden></p>
@@ -585,6 +606,7 @@
     let datosFormas = null;
     const formas = new Map();
     const formasSinTildes = new Map();
+    const listaFormas = [];
     function descomprimirFormas() {
       if (!datosFormas) return;
       datosFormas.paradigmas.forEach((paradigma, k) => {
@@ -596,11 +618,94 @@
             const forma = lema.slice(0, lema.length - Number(quitar)) + resto;
             formas.set(forma, i);
             const clave = normalizar(forma);
-            if (!formasSinTildes.has(clave)) formasSinTildes.set(clave, i);
+            if (!formasSinTildes.has(clave)) {
+              formasSinTildes.set(clave, i);
+              listaFormas.push([clave, forma, i]); // para las erratas
+            }
           }
         }
       });
       datosFormas = null;
+    }
+
+    // ---------- erratas: «¿Querías decir…?» ----------
+    // Distancia de Damerau-Levenshtein (dos letras seguidas cambiadas de orden son un solo error)
+    // entre palabras ya sin tildes. Devuelve max + 1 en cuanto se ve que la distancia pasará de max.
+    // Las filas de la tabla se reutilizan para no crear arrays en cada comparación.
+    const LARGO = 48;
+    let filaAntes = new Int32Array(LARGO), filaPrevia = new Int32Array(LARGO), filaActual = new Int32Array(LARGO);
+    function distancia(a, b, max) {
+      if (Math.abs(a.length - b.length) > max || b.length >= LARGO) return max + 1;
+      for (let j = 0; j <= b.length; j++) filaPrevia[j] = j;
+      for (let i = 1; i <= a.length; i++) {
+        const ca = a.charCodeAt(i - 1);
+        filaActual[0] = i;
+        let menor = i;
+        for (let j = 1; j <= b.length; j++) {
+          const cb = b.charCodeAt(j - 1);
+          let d = filaPrevia[j - 1] + (ca === cb ? 0 : 1);
+          if (filaPrevia[j] + 1 < d) d = filaPrevia[j] + 1;
+          if (filaActual[j - 1] + 1 < d) d = filaActual[j - 1] + 1;
+          if (i > 1 && j > 1 && ca === b.charCodeAt(j - 2) && a.charCodeAt(i - 2) === cb && filaAntes[j - 2] + 1 < d) d = filaAntes[j - 2] + 1;
+          filaActual[j] = d;
+          if (d < menor) menor = d;
+        }
+        if (menor > max) return max + 1;
+        [filaAntes, filaPrevia, filaActual] = [filaPrevia, filaActual, filaAntes];
+      }
+      return filaPrevia[b.length];
+    }
+
+    // Palabras del vocabulario y formas flexionadas, sin tildes y agrupadas por longitud:
+    // [sin tildes, como se escribe, índice de su palabra]. Se preparan con la primera errata.
+    let porLongitud = null, formasPorLongitud = null;
+    function agrupar(entradas) {
+      const grupos = [];
+      for (const e of entradas) (grupos[e[0].length] ??= []).push(e);
+      return grupos;
+    }
+
+    // Las más parecidas a w a distancia max como mucho; a igual distancia, primero la más
+    // frecuente (la de menor índice), sin repetir la palabra a la que cuentan.
+    // Antes de calcular la distancia se descartan las que no tienen casi las mismas letras:
+    // cada error cambia como mucho una letra de más y una de menos.
+    const letras = new Int32Array(128);
+    function masParecidas(grupos, w, max) {
+      let mejor = max + 1, halladas = [];
+      for (let k = 0; k < w.length; k++) letras[w.charCodeAt(k) & 127]++;
+      for (let n = w.length - max; n <= w.length + max; n++) {
+        for (const c of grupos[n] ?? []) {
+          const p = c[0], tope = Math.min(max, mejor);
+          let sobran = 0;
+          for (let k = 0; k < n; k++) if (letras[p.charCodeAt(k) & 127]-- <= 0) sobran++;
+          for (let k = 0; k < n; k++) letras[p.charCodeAt(k) & 127]++;
+          if (sobran > tope || w.length - n + sobran > tope) continue;
+          const d = distancia(w, p, tope);
+          if (d < mejor) { mejor = d; halladas = [c]; }
+          else if (d === mejor && d <= max) halladas.push(c);
+        }
+      }
+      letras.fill(0);
+      const vistas = new Set();
+      halladas = halladas.sort((a, b) => a[2] - b[2]).filter((c) => !vistas.has(c[2]) && vistas.add(c[2])).slice(0, 2);
+      return { distancia: mejor, halladas };
+    }
+
+    // Hasta dos sugerencias [como se escribe, índice]. En cada distancia se mira primero el
+    // vocabulario y luego las formas: corriemdo → corriendo (1) antes que corrido (2).
+    function sugerencias(texto) {
+      const w = normalizar(texto.trim().toLowerCase());
+      if (w.length < 3) return [];
+      const max = w.length <= 5 ? 1 : 2;
+      descomprimirFormas();
+      porLongitud ??= agrupar([...sinTildes].map(([clave, i]) => [clave, vocab[i], i]));
+      formasPorLongitud ??= listaFormas.length ? agrupar(listaFormas) : null;
+      let mejores = masParecidas(porLongitud, w, max);
+      if (formasPorLongitud && mejores.distancia > 1) {
+        const enFormas = masParecidas(formasPorLongitud, w, mejores.distancia - 1);
+        if (enFormas.halladas.length) mejores = enFormas;
+      }
+      return mejores.halladas.map(([, palabra, i]) => [palabra, i]);
     }
 
     // Palabras gramaticales (el, de, que, yo): no son del juego, pero se reconocen para
@@ -675,6 +780,30 @@
       $("ver-mas").hidden = cuantas === 100;
       $("aledanos").hidden = false;
       pintarProxima();
+      pintarCuriosidad();
+    }
+
+    // ---------- curiosidad de la palabra: se pide al terminar la primera partida ----------
+    // Los étimos van entre guiones bajos (_castanea_) y se ponen en cursiva.
+    let cargaCuriosidades;
+    function pintarCuriosidad() {
+      const n = num;
+      cargaCuriosidades ??= fetch("data/curiosidades.json").then((r) => {
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      }).catch(() => { cargaCuriosidades = null; return {}; });
+      cargaCuriosidades.then((curiosidades) => {
+        const texto = curiosidades[palabra];
+        if (n !== num || !estado.fin) return; // ya se ha cambiado de día
+        $("curiosidad").hidden = !texto;
+        if (!texto) return;
+        $("curiosidad-texto").replaceChildren(...texto.split(/_([^_]+)_/).map((trozo, k) => {
+          if (k % 2 === 0) return trozo;
+          const i = document.createElement("i");
+          i.textContent = trozo;
+          return i;
+        }));
+      });
     }
 
     // ---------- cuenta atrás hasta la palabra de mañana ----------
@@ -871,15 +1000,17 @@
       pintarCalendario();
     }
 
-    function probar(texto) {
+    // errata: lo que se escribió, cuando se prueba la sugerencia de «¿Querías decir…?».
+    function probar(texto, errata) {
       const aviso = $("aviso");
       if (!texto.trim()) return;
       if (esComun(texto)) { aviso.textContent = "Esa palabra es demasiado común para el juego"; return; }
       const i = buscar(texto);
-      if (i < 0) { aviso.textContent = "No conozco esa palabra"; return; }
-      // Si cuenta como otra palabra (luces, corriendo), se dice cuál.
+      if (i < 0) { avisoErrata(texto); return; }
+      // Si cuenta como otra palabra (luces, corriendo, una errata), se dice cuál.
       const escrita = texto.trim().toLowerCase();
-      const como = normalizar(escrita) === normalizar(vocab[i]) ? "" : `${escrita} → ${vocab[i]}`;
+      let como = normalizar(escrita) === normalizar(vocab[i]) ? "" : `${escrita} → ${vocab[i]}`;
+      if (errata) como = `${errata} → ${como || vocab[i]}`;
       if (estado.intentos.some((t) => t.i === i)) {
         aviso.textContent = como ? `${como}: ya la has probado` : `Ya has probado «${vocab[i]}»`;
         pintar(i);
@@ -891,6 +1022,42 @@
       marcarJugado();
       guardarEstado();
       pintar(i);
+    }
+
+    // Palabra desconocida: si se parece a alguna, se ofrece como botón que la prueba.
+    // Las que ya se han probado se nombran sin botón, para no contarlas otra vez.
+    function avisoErrata(texto) {
+      const aviso = $("aviso");
+      const halladas = sugerencias(texto);
+      if (!halladas.length) { aviso.textContent = "No conozco esa palabra"; return; }
+      const escrita = texto.trim().toLowerCase();
+      const probadas = halladas.filter(([, i]) => estado.intentos.some((t) => t.i === i));
+      const partes = [`No conozco “${escrita}”. ¿Querías decir `];
+      halladas.forEach(([palabra, i], k) => {
+        if (k) partes.push(" o ");
+        if (probadas.some((p) => p[1] === i)) {
+          const b = document.createElement("b");
+          b.textContent = palabra;
+          partes.push(b);
+          if (halladas.length > 1) partes.push(" (ya probada)");
+          return;
+        }
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "sugerencia";
+        boton.textContent = palabra;
+        boton.addEventListener("click", () => {
+          probar(palabra, escrita);
+          $("entrada").focus();
+        });
+        partes.push(boton);
+      });
+      partes.push("?");
+      if (halladas.length === 1 && probadas.length) {
+        partes.push(" Ya la has probado");
+        pintar(halladas[0][1]);
+      }
+      aviso.replaceChildren(...partes);
     }
 
     // Pista: una palabra a mitad de camino entre tu mejor puesto y la solución.
@@ -1049,6 +1216,7 @@
       $("copiado").textContent = "";
       $("controles").hidden = false;
       $("final").hidden = true;
+      $("curiosidad").hidden = true;
       $("aledanos").hidden = true;
       delete $("aledanos").dataset.todas;
 

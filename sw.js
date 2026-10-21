@@ -3,7 +3,7 @@
 // cambios del juego) y, si no hay conexión, se sirven desde la caché.
 // Los iconos y el logo salen directamente de la caché.
 
-const CACHE = "aledanio-v3";
+const CACHE = "aledanio-v4";
 const BASICOS = [
   "./",
   "index.html",
@@ -12,6 +12,7 @@ const BASICOS = [
   "data/vocabulario.json",
   "data/formas.json",
   "data/comunes.json",
+  "data/curiosidades.json",
   "icons/favicon.svg",
   "icons/favicon-32.png",
   "icons/favicon-16.png",
