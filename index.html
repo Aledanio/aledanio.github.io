@@ -28,8 +28,8 @@
   <link rel="icon" href="icons/favicon-16.png" sizes="16x16" type="image/png">
   <link rel="alternate icon" href="icons/favicon.ico">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <meta name="theme-color" content="#E0672C">
-  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#E0672C" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1c1814" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-title" content="Aledaño">
   <style>
     :root {
@@ -45,8 +45,31 @@
       --t-caliente: #EF8D52;
       --t-templado: #F6B183;
       --t-frio: #9db8c9;
+      --t-lejos: #fbd9c0; /* quinto tramo del histograma */
+      --texto-claro: #1f1d1a; /* texto sobre los colores claros de la paleta */
+      --velo: rgba(31, 29, 26, 0.45);
+      color-scheme: light dark;
     }
-    :root { color-scheme: light; }
+    /* Tema oscuro: sigue la preferencia del sistema. Fondo pardo cálido, tarjetas algo más
+       claras, y los colores de temperatura ajustados para que se distingan sobre él. */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1814;
+        --fg: #f1ebe3;
+        --muted: #a99f93;
+        --accent: #f08a5a;
+        --card: #28221d;
+        --line: #3b332c;
+        --track: #3a322b;
+        --t-1: #ff5a3d;
+        --t-ardiendo: #E0672C;
+        --t-caliente: #EF8D52;
+        --t-templado: #F6B183;
+        --t-frio: #6f93a8;
+        --t-lejos: #a87458;
+        --velo: rgba(0, 0, 0, 0.6);
+      }
+    }
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
     body {
@@ -160,7 +183,7 @@
       color: var(--fg);
     }
     .ventana[open] { display: flex; flex-direction: column; gap: 10px; }
-    .ventana::backdrop { background: rgba(31, 29, 26, 0.45); }
+    .ventana::backdrop { background: var(--velo); }
     .cal-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     .cal-cab h2 { margin: 0; font-size: 1.1rem; letter-spacing: 0; text-transform: none; color: var(--fg); }
     .cal-cab h2::first-letter { text-transform: uppercase; }
@@ -206,7 +229,7 @@
     }
     button.cal-dia.resuelto { background: var(--t-ardiendo); color: #fff; }
     .cal-dia.resuelto::after { display: none; }
-    button.cal-dia.rendido { background: var(--t-templado); }
+    button.cal-dia.rendido { background: var(--t-templado); color: var(--texto-claro); }
     .cal-dia.rendido::after { display: none; }
     .cal-dia.hoy { color: var(--accent); }
     .cal-dia.resuelto.hoy { color: #fff; }
