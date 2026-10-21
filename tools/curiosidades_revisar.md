@@ -135,10 +135,10 @@ Es el diminutivo de «mala», la valija del correo, que vino del francés antigu
 
 ## 19. bosque
 
-Su origen es incierto, aunque tiene parientes cercanos en el catalán y el occitano _bosc_. De «bosque» viene «emboscar», esconderse entre los árboles para caer por sorpresa sobre alguien: eso es, literalmente, una emboscada.
+Llegó del catalán u occitano _bosc_, de probable origen germánico. De «bosque» viene «emboscar», esconderse entre los árboles para caer por sorpresa sobre alguien: eso es, literalmente, una emboscada.
 
 - *Fuente:* DLE, s. v. bosque («De or. inc.») y emboscar (de en- y bosque). Comprobado el 21-10-2026.
-- *Caracteres:* 224
+- *Caracteres:* 200
 
 ## 20. volcán
 
@@ -431,10 +431,10 @@ Viene del latín _rivus_, ‘arroyo’. Y de _rivalis_, el que compartía el mis
 
 ## 61. huevo
 
-Viene del latín _ovum_. La hache no viene del latín: se escribió para que nadie leyera «vevo», porque antiguamente la u y la v se escribían igual. Lo mismo pasa en «hueso» o «huerto». _Ovum_ sigue en «óvalo» y «ovario».
+Viene del latín _ovum_. La hache no viene del latín: se escribió para que nadie leyera «vevo», porque antiguamente la u y la v se escribían igual. Lo mismo pasa en «hueso» o «hueco». _Ovum_ sigue en «óvalo» y «ovario».
 
 - *Fuente:* DLE, s. v. huevo (Del lat. ovum). La h- ante ue- como recurso gráfico: Ortografía de la lengua española (RAE, 2010).
-- *Caracteres:* 215
+- *Caracteres:* 218
 
 ## 62. circo
 
