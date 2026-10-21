@@ -28,10 +28,12 @@ RAIZ = Path(__file__).resolve().parent.parent
 DATOS = RAIZ / "data"
 EXCLUIR = Path(__file__).resolve().parent / "excluir.txt"
 
-INICIO = date(2026, 10, 21)
+INICIO = date(2026, 10, 11)
 DIAS = [
     "castaña", "biblioteca", "tren", "abuela", "guitarra",
     "nieve", "espejo", "queso", "reloj", "calabaza",
+    "faro", "mariposa", "café", "montaña", "sombrero",
+    "perro", "cuchillo", "maleta", "bosque", "volcán",
 ]
 
 N_FRECUENTES = 60000

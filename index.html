@@ -436,7 +436,7 @@
   </div>
 
   <script>
-    const INICIO = Date.UTC(2026, 9, 21); // día nº 1
+    const INICIO = Date.UTC(2026, 9, 11); // día nº 1
     const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
     const $ = (id) => document.getElementById(id);
 
@@ -788,6 +788,13 @@
     function iniciar() {
       hoy = hoyEnMadrid();
       jugados = leer("aledanio:jugados", {});
+      // El nº 1 pasó del 21 al 11 de octubre: los días jugados antes del cambio se corren 10 puestos.
+      // (Las partidas guardadas no se tocan: van con su palabra, que conserva su número.)
+      if (!leer("aledanio:inicio-11-oct", false)) {
+        jugados = Object.fromEntries(Object.keys(jugados).map((d) => [Number(d) + 10, 1]));
+        guardar("aledanio:jugados", jugados);
+        guardar("aledanio:inicio-11-oct", true);
+      }
       // Partidas de hoy empezadas antes de que existiera la racha.
       if (leer(`aledanio:dia:${hoy}`, null)?.intentos?.length && !jugados[hoy]) {
         jugados[hoy] = 1;
